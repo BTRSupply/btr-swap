@@ -1,23 +1,27 @@
 <div align="center">
   <img border-radius="25px" max-height="250px" src="./swapper.png" />
-  <h1>Swapper</h1>
+  <h1>BTR Swap</h1>
   <p>
-    <strong>by <a href="https://astrolab.fi">Astrolab<a></strong>
+    <strong>Actively maintained fork of <a href="https://github.com/AstrolabDAO/swapper">AstrolabDAO/swapper</a></strong>
   </p>
   <p>
     <!-- <a href="https://github.com/AstrolabFinance/swapper/actions"><img alt="Build Status" src="https://github.com/AstrolabFinance/swapper/actions/workflows/tests.yaml/badge.svg" /></a> -->
-    <a href="https://opensource.org/licenses/MIT"><img alt="License" src="https://img.shields.io/github/license/AstrolabFinance/swapper?color=3AB2FF" /></a>
+    <a href="https://opensource.org/licenses/MIT"><img alt="License" src="https://img.shields.io/github/license/BTRSupply/btr-swap?color=3AB2FF" /></a>
     <a href="https://discord.gg/PtAkTCwueu"><img alt="Discord Chat" src="https://img.shields.io/discord/984518964371673140"/></a>
     <a href="https://docs.astrolab.fi"><img alt="Astrolab Docs" src="https://img.shields.io/badge/astrolab_docs-F9C3B3" /></a>
   </p>
 </div>
 
-Swapper is Astrolab's liquidity meta-aggregator, powering all of its monochain and cross-chain swaps.
+# BTR Swap
+
+This repository is an actively maintained fork of [AstrolabDAO/swapper](https://github.com/AstrolabDAO/swapper), enhanced and adapted for BTR Supply's specific needs.
+
+Swapper is a liquidity meta-aggregator, powering monochain and cross-chain swaps.
 It blends liquidity and bridge aggregators.
 The DEX meta-aggregation was inspired by [LlamaSwap](https://swap.defillama.com/)'s work [available here](https://github.com/LlamaSwap/), supercharged with cross-chain capacity.
 
 ## ⚠️ Disclaimer
-Astrolab DAO and its core team members will not be held accountable for losses related to the deployment and use of this repository's codebase.
+BTR and its core team members will not be held accountable for losses related to the deployment and use of this repository's codebase.
 As per the [licence](./LICENCE) states, the code is provided as-is and is under active development. The codebase, documentation, and other aspects of the project may be subject to changes and improvements over time.
 
 ## Aggregator Types
@@ -65,8 +69,8 @@ Don't hesitate to reach out or submit pull requests with missing aggregators ada
 
 ### Swapper SDK
 
-[![NPM Version](https://img.shields.io/npm/v/@astrolabs/swapper.svg)](https://www.npmjs.com/package/@astrolabs/swapper)
-[![License](https://img.shields.io/npm/l/@astrolabs/swapper.svg)](https://github.com/AstrolabFinance/swapper/blob/main/LICENSE)
+[![NPM Version](https://img.shields.io/npm/v/@btrsupply/swap.svg)](https://www.npmjs.com/package/@btrsupply/swap)
+[![License](https://img.shields.io/npm/l/@btrsupply/swap.svg)](https://github.com/BTRSupply/btr-swap/blob/main/LICENSE)
 
 Generic Swap+Bridge aggregator SDK for EVM-compatible chains.
 
@@ -83,11 +87,11 @@ This SDK provides a unified interface to fetch swap quotes and transaction data 
 ## Installation
 
 ```bash
-npm install @astrolabs/swapper
+npm install @btrsupply/swap
 # or
-yarn add @astrolabs/swapper
+yarn add @btrsupply/swap
 # or
-bun add @astrolabs/swapper
+bun add @btrsupply/swap
 ```
 
 ## Usage
@@ -101,7 +105,7 @@ import {
   AggId, // Enum for aggregator identifiers
   ISwapperParams,
   ITransactionRequestWithEstimate
-} from "@astrolabs/swapper";
+} from "@btrsupply/swap";
 
 async function fetchSwapQuote() {
   const params: ISwapperParams = {
@@ -157,11 +161,11 @@ A simple CLI tool is provided for quick testing and quotes.
 
 ```bash
 # Install globally (optional)
-# npm install -g @astrolabs/swapper
+# npm install -g @btrsupply/swap
 
 # Basic quote (defaults to LiFi, Squid, Socket, Unizen, Rango aggregators)
 # bunx used here for execution without global install
-bunx swapper-cli quote \
+bunx btr-swap-cli quote \
   --input-chain 1 \
   --input-token 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE \
   --output-token 0x6B175474E89094C44Da98b954EedeAC495271d0F \
@@ -169,7 +173,7 @@ bunx swapper-cli quote \
   --payer 0xYourWalletAddress
 
 # Specify aggregator (1inch), max slippage (0.3%), and integrator ID
-bunx swapper-cli quote \
+bunx btr-swap-cli quote \
   --input-chain 1 \
   --input-token 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE \
   --output-token 0x6B175474E89094C44Da98b954EedeAC495271d0F \
@@ -180,7 +184,7 @@ bunx swapper-cli quote \
   --integrator-id MyCoolDapp
 
 # Cross-chain quote, fetch from all specified aggregators
-bunx swapper-cli quote \
+bunx btr-swap-cli quote \
   --input-chain 1 \
   --input-token 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE \
   --output-chain 10 \
@@ -191,13 +195,13 @@ bunx swapper-cli quote \
   --all
 
 # Pass API keys via JSON
-bunx swapper-cli quote \
+bunx btr-swap-cli quote \
   --input-chain 1 --output-chain 10 ... \
   --aggregators ${AggId.SOCKET} \
   --apiKeys '{"${AggId.SOCKET}":"YOUR_SOCKET_KEY"}'
 
 # Get help
-bunx swapper-cli quote --help
+bunx btr-swap-cli quote --help
 ```
 
 ## Testing Strategy
@@ -226,8 +230,8 @@ bun run ts-mocha --timeout 120000 "tests/unit/aggregators.test.ts"
 
 ```bash
 # Clone the repository
-git clone https://github.com/AstrolabFinance/swapper.git
-cd swapper
+git clone https://github.com/BTRSupply/btr-swap.git
+cd btr-swap
 
 # Install dependencies
 bun install
@@ -248,9 +252,22 @@ bun run test
 bun run build
 ```
 
+## About this Fork
+
+This repository is a fork of the original [AstrolabDAO/swapper](https://github.com/AstrolabDAO/swapper) that is being actively maintained by [BTR Supply](https://github.com/BTRSupply). Our fork includes several enhancements and modifications:
+
+- Updated API keys management
+- Enhanced error handling
+- Additional aggregator support
+- Performance improvements
+- Updated dependencies
+- BTR Supply specific configurations and integrations
+
+While we aim to stay compatible with the original codebase, our primary goal is to support BTR Supply's specific requirements and use cases. We may periodically sync with the upstream repository to incorporate beneficial changes and fixes.
+
 ## Contributing
 
-Contributions are welcome! Please open an issue or submit a pull request.
+Contributions are welcome! Feel free to open an issue or create a pull request if you have any improvements or suggestions.
 
 ## License
 

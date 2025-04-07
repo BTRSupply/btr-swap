@@ -1,12 +1,12 @@
 {
-  "name": "@astrolabs/swapper",
-  "version": "1.1.0",
+  "name": "@btrsupply/swap",
+  "version": "1.0.0",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "swapper-cli": "./dist/cli/cli.js"
+    "btr-swap-cli": "./dist/cli/cli.js"
   },
   "exports": {
     ".": {
@@ -14,12 +14,12 @@
       "import": "./dist/index.js"
     }
   },
-  "repository": "https://github.com/AstrolabFinance/swapper",
-  "author": "Astrolab DAO <contact@astrolab.fi>",
+  "repository": "https://github.com/BTRSupply/btr-swap",
+  "author": "BTR Supply <contact@btr.supply>",
   "license": "MIT",
   "description": "Generic Bridge+Swap aggregator for compatible EVMs",
   "keywords": [
-    "astrolab",
+    "btr",
     "yield aggregation",
     "aggregator",
     "swap",
