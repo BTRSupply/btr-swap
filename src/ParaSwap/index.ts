@@ -1,190 +1,164 @@
-import qs from "qs";
-import { ISwapperParams, ITransactionRequestWithEstimate, validateQuoteParams } from "../types";
+import { IParaSwapRoute, TransactionRequest } from "./types"; // Import types from the new file
 
-// PasarSwap specific types
-interface ISwapExchange {
-  exchange: string;
-  srcAmount: string|number;
-  destAmount: string|number;
-  percent: string|number;
-  data: {
-    router: string;
-    path: string[];
-    factory: string;
-    initCode: string;
-    feeFactor: string|number;
-    pools: {
-      address: string;
-      fee: string|number;
-      direction: boolean;
-    }[];
-    gasUSD: string;
-  };
-}
+import { BaseAggregator } from "@/abstract";
+import { AggId, ICostEstimate, ISwapperParams, ITransactionRequestWithEstimate } from "@/types";
+import {
+  addEstimatesToTransactionRequest,
+  buildQueryParams,
+  emptyCostEstimate,
+  formatError,
+  fetchJson,
+  mapKToKV,
+} from "@/utils";
 
-interface ISwap {
-  srcToken: string;
-  srcDecimals: number;
-  destToken: string;
-  destDecimals: number;
-  swapExchanges: ISwapExchange[];
-}
+/**
+ * Implementation of the ParaSwap aggregator.
+ * Provides access to the ParaSwap API for token swaps and price quotes.
+ * @see https://developers.paraswap.io/api/master
+ */
+export class ParaSwap extends BaseAggregator {
+  constructor() {
+    super(AggId.PARASWAP);
+    this.routerByChainId = {
+      // Augustus V6.2
+      1: "0x6a000f20005980200259b80c5102003040001068", // Ethereum
+      10: "0x6a000f20005980200259b80c5102003040001068", // Optimism
+      56: "0x6a000f20005980200259b80c5102003040001068", // BNB Chain
+      137: "0x6a000f20005980200259b80c5102003040001068", // Polygon
+      250: "0x6a000f20005980200259b80c5102003040001068", // Fantom
+      8453: "0x6a000f20005980200259b80c5102003040001068", // Base
+      42161: "0x6a000f20005980200259b80c5102003040001068", // Arbitrum
+      43114: "0x6a000f20005980200259b80c5102003040001068", // Avalanche
+    };
+    this.aliasByChainId = mapKToKV(this.routerByChainId); // ParaSwap uses chain ID as string alias
+    this.approvalAddressByChainId = this.routerByChainId;
+  }
 
-interface IOther {
-  exchange: string;
-  srcAmount: string;
-  destAmount: string;
-  unit: string;
-  data: {
-    router: string;
-    path: string[];
-    factory: string;
-    initCode: string;
-    feeFactor: number;
-    pools: {
-      address: string;
-      fee: number;
-      direction: boolean;
-    }[];
-    gasUSD: string;
-  };
-}
+  /**
+   * Returns API headers for ParaSwap requests
+   */
+  private getHeaders(contentType = false): Record<string, string> {
+    const headers: Record<string, string> = {};
+    if (this.apiKey) {
+      headers["x-api-key"] = this.apiKey;
+    }
+    if (contentType) {
+      headers["Content-Type"] = "application/json";
+    }
+    return headers;
+  }
 
-interface IPriceRoute {
-  blockNumber: number;
-  network: number;
-  srcToken: string;
-  srcDecimals: number;
-  srcAmount: string;
-  destToken: string;
-  destDecimals: number;
-  destAmount: string;
-  bestRoute: {
-    percent: number;
-    swaps: ISwap[];
-  };
-  others: IOther;
-  gasCostUSD: string;
-  gasCost: string;
-  side: string;
-  tokenTransferProxy: string;
-  contractAddress: string;
-  contractMethod: string;
-  srcUSD: string;
-  destUSD: string;
-  partner: string;
-  partnerFee: number;
-  maxImpactReached: boolean;
-  hmac: string;
-}
+  /**
+   * Converts swapper parameters to ParaSwap API format.
+   * @param params - The swapper parameters
+   * @param excludeRoute - Whether to exclude route information in the response
+   * @returns Record of parameters formatted for ParaSwap API
+   * @throws Error if chain is not supported
+   */
+  protected convertParams(params: ISwapperParams, excludeRoute = false): Record<string, any> {
+    this.validateQuoteParams(params);
 
-interface IQuoteParams {
-  srcToken: string;
-  srcDecimals?: number;
-  destToken: string;
-  destDecimals?: number;
-  amount: string;
-  side: 'SELL' | 'BUY';
-  network: number;
-  gasPrice?: number;
-  ignoreChecks?: boolean;
-  ignoreGasEstimate?: boolean;
-  onlyParams?: boolean;
-  otherExchangePrices?: boolean;
-  priceRoute?: IPriceRoute;
-  slippage?: number;
-  userAddress: string;
-  txOrigin?: string;
-  receiver?: string;
-  includeDEXS?: string[];
-  excludeDEXS?: string[];
-  includeContractMethods?: string[];
-  excludeContractMethods?: string[];
-  route?: string;
-  partner?: string; // project name
-  partnerAddress?: string; // project treasury address for surplus
-  takeSurplus?: boolean; // send positive slippage to partnerAddress (default: false)
-  deadline?: number;
-}
+    return {
+      network: params.inputChainId,
+      side: "SELL",
+      srcToken: params.input,
+      destToken: params.output,
+      amount: params.amountWei.toString(),
+      userAddress: params.receiver ?? params.payer,
+      integratorId: this.integrator,
+      slippage: params.maxSlippage,
+      deadline: Math.floor(Date.now() / 1000) + 300, // 5 minutes from now
+      ignoreChecks: true,
+      ignoreGasEstimate: true,
+      otherExchangePrices: !excludeRoute,
+    };
+  }
 
-interface IQuoteData {
-  from: string;
-  to: string;
-  value: number;
-  data: string | Uint8Array;
-  gasPrice: number;
-  gas: number;
-  chainId: number;
-}
+  /**
+   * Fetches price route from ParaSwap API.
+   * @param params - The swapper parameters
+   * @returns Promise resolving to price route, or undefined if unavailable
+   */
+  public async getQuote(params: ISwapperParams): Promise<IParaSwapRoute | undefined> {
+    try {
+      const url = `${this.getApiRoot(params.inputChainId)}/prices/?${buildQueryParams(this.convertParams(params, true))}`;
+      const res = await fetchJson<{ priceRoute: IParaSwapRoute } | { message: string }>(url, {
+        headers: this.getHeaders(),
+      });
 
-export const routerByChainId: { [id: number]: string } = {
-  1: "0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57",
-  10: "0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57",
-  56: "0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57",
-  100: "0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57",
-  137: "0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57",
-  250: "0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57",
-  324: "0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57", // zksync cmon ser
-  1101: "0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57",
-  8217: "0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57",
-  8453: "0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57",
-  42161: "0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57",
-  43114: "0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57",
-};
+      if ("message" in res) throw formatError(res.message as string, 500, res);
+      if (!res?.priceRoute) throw formatError("Invalid response", 500, res);
 
-const apiKey = process.env?.PARASWAP_API_KEY;
-const apiRoot = "https://api.paraswap.io";
+      return res.priceRoute;
+    } catch (error) {
+      this.handleError(error, "[ParaSwap] getQuote");
+      return undefined;
+    }
+  }
 
-const convertParams = (o: ISwapperParams): IQuoteParams => ({
-  network: o.inputChainId,
-  side: "SELL",
-  srcToken: o.input,
-  destToken: o.output,
-  amount: o.amountWei.toString(),
-  userAddress: o.receiver ?? o.payer,
-  // txOrigin: o.payer,
-  partner: o.project ?? "astrolab",
-  slippage: o.maxSlippage!, // bps
-  deadline: Math.floor(Date.now() / 1000) + 300, // 5min
-  ignoreChecks: true,
-  ignoreGasEstimate: true,
-  otherExchangePrices: true,
-});
+  /**
+   * Fetches a transaction request for a ParaSwap swap.
+   * @param params - The swapper parameters
+   * @returns Promise resolving to the transaction request with estimates, or undefined
+   */
+  public async getTransactionRequest(
+    params: ISwapperParams,
+  ): Promise<ITransactionRequestWithEstimate | undefined> {
+    try {
+      const priceRoute = await this.getQuote(params);
+      if (!priceRoute) throw new Error("Failed to get quote");
 
-// NB: inspired by official docs https://developers.paraswap.network/api/examples
-export async function getTransactionRequest(o: ISwapperParams): Promise<ITransactionRequestWithEstimate|undefined> {
-  if (!validateQuoteParams(o)) throw new Error("invalid input");
-  o.amountWei = BigInt(o.amountWei.toString());
-  const priceRoute = await getQuote(o);
-  const params = convertParams(o);
-  const paramsWithRoute = { ...params, priceRoute };
-  try {
-    const res = await fetch(
-      `${apiRoot}/transactions/${o.inputChainId}?${qs.stringify(params)}`,
-      {
+      const routerAddress = this.getRouterAddress(params.inputChainId);
+      if (!routerAddress) throw new Error(`No router for chain ${params.inputChainId}`);
+
+      // Build transaction
+      const buildParams = {
+        ...this.convertParams(params),
+        priceRoute,
+        srcAmount: priceRoute.srcAmount,
+        destAmount: priceRoute.destAmount,
+        userAddress: params.payer,
+        receiver: params.receiver,
+        otherExchangePrices: false,
+      };
+
+      const url = `${this.getApiRoot(params.inputChainId)}/transactions/${params.inputChainId}`;
+      const txRes = await fetchJson<TransactionRequest | { message: string }>(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(paramsWithRoute),
-      },
-    );
-    if (res.status >= 400)
-      throw new Error(`${res.status}: ${res.statusText} - ${await res.text?.()}`);
-    return await res.json();
-  } catch (e) {
-    console.error(`getTransactionRequest failed: ${e}`);
+        headers: this.getHeaders(true),
+        body: JSON.stringify(buildParams),
+      });
+
+      if ("message" in txRes) throw formatError(txRes.message as string, 500, txRes);
+      if (!txRes?.data || !txRes?.to) throw formatError("Invalid response", 500, txRes);
+      if (txRes.to.toLowerCase() !== routerAddress.toLowerCase())
+        throw formatError(`Router mismatch: ${txRes.to} vs ${routerAddress}`, 500, txRes);
+
+      // Build transaction with estimates
+      const gasEstimate = {
+        ...emptyCostEstimate(),
+        totalGasCostUsd: parseFloat(priceRoute.gasCostUSD ?? "0"),
+        totalGasCostWei: BigInt(priceRoute.gasCost ?? "0"),
+      };
+
+      return addEstimatesToTransactionRequest({
+        tr: { ...txRes, from: params.payer },
+        inputAmountWei: BigInt(priceRoute.srcAmount),
+        outputAmountWei: BigInt(priceRoute.destAmount),
+        inputDecimals: priceRoute.srcDecimals,
+        outputDecimals: priceRoute.destDecimals,
+        approvalAddress: routerAddress,
+        costEstimate: gasEstimate,
+        steps: [],
+      });
+    } catch (error) {
+      this.handleError(error, "[ParaSwap] getTransactionRequest");
+      return undefined;
+    }
   }
 }
 
-export async function getQuote(o: ISwapperParams): Promise<IPriceRoute|undefined> {
-  if (!validateQuoteParams(o)) throw new Error("invalid input");
-  const params = convertParams(o);
-  try {
-    const url = `${apiRoot}/prices/${o.inputChainId}?${qs.stringify(params)}`;
-    const res = await fetch(url);
-    if (res.status >= 400)
-      throw new Error(`${res.status}: ${res.statusText} - ${await res.text?.()}`);
-    return await res.json();
-  } catch (e) {
-    console.error(`getQuote failed: ${e}`);
-  }
-}
+/**
+ * Singleton instance of the ParaSwap aggregator.
+ */
+export const paraSwapAggregator = new ParaSwap();

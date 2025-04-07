@@ -1,217 +1,191 @@
-import * as OneInch from "./OneInch";
-import * as ZeroX from "./ZeroX";
-import * as ParaSwap from "./ParaSwap";
-import * as KyberSwap from "./KyberSwap";
-import * as Squid from "./Squid";
-import * as LiFi from "./LiFi";
-import * as Socket from "./Socket";
+// import { rocketXAggregator } from "@/RocketX";
+import { BaseAggregator } from "@/abstract";
+import { firebirdAggregator } from "@/Firebird";
+import { kyberSwapAggregator } from "@/KyberSwap";
+import { lifiAggregator } from "@/LiFi";
+import { odosAggregator } from "@/Odos";
+import { oneInchAggregator } from "@/OneInch";
+import { openOceanAggregator } from "@/OpenOcean";
+import { paraSwapAggregator } from "@/ParaSwap";
+import { rangoAggregator } from "@/Rango";
+import { socketAggregator } from "@/Socket";
+import { squidAggregator } from "@/Squid";
+// import { bebopAggregator } from "@/Bebop";
+// import { debridgeAggregator } from "@/DeBridge";
+// import { cowSwapAggregator } from "@/CowSwap";
+// import { hashflowAggregator } from "@/Hashflow";
+// import { airSwapAggregator } from "@/AirSwap";
+// import { oneInchFusionAggregator } from "@/OneInchFusion";
+// import { zeroXv2Aggregator } from "@/ZeroXv2";
+// import { paraSwapDeltaAggregator } from "@/ParaSwapDelta";
+// import { unizenGaslessAggregator } from "@/UnizenGasless";
+import { AggId, ISwapperParams, ITransactionRequestWithEstimate } from "@/types";
+import { unizenAggregator } from "@/Unizen";
+import { swapperParamsToString, transactionRequestToString, weiToString } from "@/utils";
+import { zeroXAggregator } from "@/ZeroX";
 
-import {
-  Aggregator,
-  AggregatorId,
-  ICommonStep,
-  ISwapperParams,
-  IToken,
-  ITransactionRequestWithEstimate,
-  Stringifiable
-} from "./types";
+/** Mapping of AggId to its corresponding Aggregator implementation instance. */
+export const aggregatorById: { [key: string]: BaseAggregator } = {
+  // Meta-Aggregators
+  [AggId.SQUID]: squidAggregator,
+  [AggId.LIFI]: lifiAggregator,
+  [AggId.SOCKET]: socketAggregator,
+  [AggId.RANGO]: rangoAggregator,
+  [AggId.UNIZEN]: unizenAggregator,
+  // [AggId.ROCKETX]: rocketXAggregator,
 
-// aggregatorId to aggregator mapping used by meta-aggregating getTransactionRequest
-export const aggregatorById: { [key: string]: Aggregator } = {
-  [AggregatorId.ONE_INCH]: <Aggregator>OneInch,
-  [AggregatorId.ZERO_X]: <Aggregator>ZeroX,
-  [AggregatorId.PARASWAP]: <Aggregator>ParaSwap,
-  [AggregatorId.KYBERSWAP]: <Aggregator>KyberSwap,
-  [AggregatorId.SQUID]: <Aggregator>Squid,
-  [AggregatorId.LIFI]: <Aggregator>LiFi,
-  // Socket disabled until we implement the getStatus method properly
-  // [AggregatorId.SOCKET]: <Aggregator>Socket,
+  // Passive liquidity aggregators
+  [AggId.ONE_INCH]: oneInchAggregator,
+  [AggId.ZERO_X]: zeroXAggregator,
+  [AggId.PARASWAP]: paraSwapAggregator,
+  [AggId.KYBERSWAP]: kyberSwapAggregator,
+  [AggId.ODOS]: odosAggregator,
+  [AggId.FIREBIRD]: firebirdAggregator,
+  [AggId.OPENOCEAN]: openOceanAggregator,
+  // [AggId.BEBOP]: bebopAggregator
+
+  // JIT liquidity aggregators
+  // [AggId.COWSWAP]: cowSwapAggregator,
+  // [AggId.HASHFLOW]: hashflowAggregator,
+  // [AggId.AIRSWAP]: airSwapAggregator,
+  // [AggId.ONE_INCH_FUSION]: oneInchFusionAggregator,
+  // [AggId.PARASWAP_DELTA]: paraSwapDeltaAggregator,
+  // [AggId.ZERO_X_V2]: zeroXv2Aggregator,
 };
 
-export const aggregatorsWithContractCalls = [AggregatorId.LIFI];
-export const aggregatorsAvailable = [AggregatorId.LIFI, AggregatorId.SQUID];
+/** List of aggregators supporting custom contract calls within a swap route. */
+export const aggregatorsWithContractCalls = [AggId.LIFI, AggId.SOCKET, AggId.SQUID];
+/** Default list of aggregators to query when none are specified and no custom calls are needed. */
+export const defaultAggregators = [
+  AggId.LIFI,
+  AggId.SQUID,
+  AggId.SOCKET,
+  AggId.UNIZEN,
+  AggId.RANGO,
+];
 
 /**
- * Extracts the `callData` from the `transactionRequest` (if any).
+ * Fetches the transaction request and extracts only the `data` (calldata) field.
+ * Useful for scenarios where only the calldata is needed without executing the transaction.
  * @param o - The swapper parameters.
- * @returns A promise that resolves to a string representing the call data.
+ * @returns A promise resolving to the transaction calldata string, or an empty string if no data is found.
  */
 export async function getCallData(o: ISwapperParams): Promise<string> {
-  return (await getTransactionRequest(o))?.data?.toString() ?? ""; // res.to == router address
+  // Fetches the best transaction request and returns its data field.
+  return (await getTransactionRequest(o))?.data?.toString() ?? "";
 }
 
 /**
- * Gets the meta-aggregated (best) transaction request for given swap parameters from at least one aggregator.
- * @param o - The swapper parameters.
- * @returns A promise that resolves to the transaction request with an estimate, or `undefined` if none found.
+ * Fetches transaction requests from multiple specified (or default) aggregators.
+ * Filters out failed requests and sorts the successful ones by estimated exchange rate (best first).
+ * @param o - The swapper parameters. `AggId` can be a string, an array, or omitted.
+ * @returns A promise resolving to an array of successful transaction requests sorted by rate, or undefined if none succeed.
+ * @throws {Error} If no viable routes are found from any queried aggregator.
  */
-export async function getAllTransactionRequests(o: ISwapperParams): Promise<ITransactionRequestWithEstimate[]|undefined> {
-  o.aggregatorId ??= o.customContractCalls?.length ? aggregatorsWithContractCalls : aggregatorsAvailable;
-  o.project ??= "astrolab";
-  o.amountWei = weiToString(o.amountWei as any);
-  o.maxSlippage ||= 2_000; // NOTE: 20% in bps (pessimistic slippage for tests)
-  if (!(o.aggregatorId instanceof Array))
-    o.aggregatorId = [o.aggregatorId];
+export async function getAllTransactionRequests(
+  o: ISwapperParams,
+): Promise<ITransactionRequestWithEstimate[] | undefined> {
+  // Default aggregators based on whether custom calls are needed
+  o.aggregatorId ??= o.customContractCalls?.length
+    ? aggregatorsWithContractCalls
+    : defaultAggregators;
+  o.integrator ??= "astrolab"; // Default project identifier
+  o.amountWei = weiToString(o.amountWei); // Ensure amount is string
+  o.maxSlippage ||= 2_000; // Default to 20% slippage (pessimistic for testing/robustness)
+  if (!(o.aggregatorId instanceof Array)) o.aggregatorId = [o.aggregatorId]; // Ensure AggId is array
 
-  // compare quotes/routes
-  let trs = (await Promise.all(
-    o.aggregatorId.map(async (aggregatorId): Promise<ITransactionRequestWithEstimate|undefined> => {
-      const aggregator = aggregatorById[aggregatorId];
-      const tr = aggregator.getTransactionRequest(o);
-      tr.then(tr => {
-        if (tr) tr.aggregatorId = aggregatorId;
-      });
-    return tr;
-  }))).filter(tr => !!tr) as ITransactionRequestWithEstimate[];
+  // Fetch quotes concurrently from all specified aggregators
+  const trs = (
+    await Promise.all(
+      o.aggregatorId.map(
+        async (aggregatorId): Promise<ITransactionRequestWithEstimate | undefined> => {
+          const aggregator = aggregatorById[aggregatorId];
+          if (!aggregator) {
+            console.warn(`[Meta] Aggregator not found: ${aggregatorId}`);
+            return undefined;
+          }
+          try {
+            const tr = await aggregator.getTransactionRequest(o);
+            if (tr) tr.aggregatorId ||= aggregatorId; // Tag the result with its source aggregator
+            return tr;
+          } catch (error) {
+            // Log error from individual aggregator but don't fail the whole process
+            console.error(`[${aggregatorId}] Error fetching transaction request:`, error);
+            return undefined;
+          }
+        },
+      ),
+    )
+  ).filter(Boolean) as ITransactionRequestWithEstimate[]; // Filter out undefined results (errors)
 
-  if (trs.length == 0) {
-    throw new Error(`No viable route found for ${swapperParamsToString(o)}`);
+  if (trs.length === 0) {
+    throw new Error(
+      `No viable routes found for ${swapperParamsToString(o)} across aggregators: ${o.aggregatorId.join(", ")}`,
+    );
   }
 
-  // find best exchange rate
-  trs = trs.sort((tr1, tr2) => tr1!.estimatedExchangeRate! < tr2!.estimatedExchangeRate! ? 1 : -1);
+  // Sort routes by best estimated exchange rate (descending, higher is better)
+  const sortedTrs = trs.sort((a, b) =>
+    // Use optional chaining and nullish coalescing for safety
+    (a?.estimatedExchangeRate ?? 0) < (b?.estimatedExchangeRate ?? 0) ? 1 : -1,
+  );
 
-  for (const tr of trs) {
+  // Post-processing: Ensure `from` address is the actual payer (replace testPayer if used)
+  sortedTrs.forEach(tr => {
     if (tr?.data) {
-      // replace o.testPayer with o.payer
       tr.from = o.payer;
-      // get rid of testPayer in the transactionRequest
-      (tr.data as string)?.replace(tr.from!.substring(2), o.payer.substring(2));
+      // NB: Replacing address within calldata string is fragile and likely unnecessary.
+      // The `from` field should be sufficient for signing/sending.
+      // (tr.data as string)?.replace(tr.from!.substring(2), o.payer.substring(2));
     }
-  }
-  console.log(`${trs.length} routes found for ${swapperParamsToString(o)}:\n${
-    trs.map(tr => tr.aggregatorId).join(" > ")}`);
-  return trs;
+  });
+
+  console.log(
+    `${sortedTrs.length} routes found for ${swapperParamsToString(o)} (best: ${sortedTrs[0].aggregatorId}):\n${sortedTrs
+      .map(tr => transactionRequestToString(tr))
+      .join("\n")}`,
+  );
+  return sortedTrs;
 }
 
-export const getTransactionRequest = async (o: ISwapperParams): Promise<ITransactionRequestWithEstimate|undefined> =>
+/**
+ * Gets the single best transaction request from the available aggregators based on estimated exchange rate.
+ *
+ * The result can be formatted for logging using transactionRequestToString().
+ *
+ * @param o - The swapper parameters.
+ * @returns A promise resolving to the best transaction request, or undefined if none found.
+ */
+export const getTransactionRequest = async (
+  o: ISwapperParams,
+): Promise<ITransactionRequestWithEstimate | undefined> =>
   (await getAllTransactionRequests(o))?.[0];
 
-export const weiToString = (wei: string|number|bigint|Stringifiable) => {
-  if (typeof wei === "string") {
-      return wei;
-  } else if (typeof wei === "number") {
-      wei = BigInt(Math.round(wei));
-    return wei.toString();
-  } else {
-    return wei.toString();
-  }
-};
+// Re-export core types and utilities for easier library usage
+export * from "@/abstract";
+export * from "@/types";
+export * from "@/utils";
+// Export all aggregator implementations
 
-// round wei to a compact printable number (exponential notation)
-export function compactWei(wei: number|string|BigInt) {
-  wei = Math.round(Number(wei)/1e4) * 1e4;
-  return wei.toExponential().replace(/\.0+e/, 'e');
-}
+// Meta-Aggregators
+export * from "@/LiFi";
+export * from "@/Rango";
+export * from "@/Socket";
+export * from "@/Squid";
+export * from "@/Unizen";
+// export * from "@/RocketX";
 
-export function shortenAddress(address: string, start=4, end=4, sep="."): string {
-  const len = address.length;
-  return address.slice(0, 2 + start) + sep + address.slice(len - end, len);
-}
+// Passive Liquidity Aggregators
+export * from "@/Firebird";
+export * from "@/KyberSwap";
+export * from "@/Odos";
+export * from "@/OneInch";
+export * from "@/OpenOcean";
+export * from "@/ParaSwap";
+export * from "@/ZeroX";
+// export * from "@/Bebop";
 
-/**
- * Converts swapper parameters into a human-readable string format.
- * @param o - The swapper parameters.
- * @param callData - The call data (optional).
- * @returns A human-readable string representation of the swapper parameters.
- */
-export function swapperParamsToString(o: ISwapperParams, callData?: string) {
-  return `${o.aggregatorId ? o.aggregatorId : 'Meta'} swap: ${o.inputChainId}:${shortenAddress(o.input)} (${compactWei(Number(o.amountWei))} wei) -> ${
-      o.outputChainId ?? o.inputChainId}:${shortenAddress(o.output)}${
-        callData ? ` (callData: ${callData.substring(0, 32)}... ${callData.length}bytes)` : ""}`;
-}
-
-export interface IGasEstimate {
-  totalGasCostUsd: number;
-  totalGasCostWei: string;
-  totalFeeCostUsd: number;
-  totalFeeCostWei: string;
-}
-
-// estimate normalization from bridge/dex aggregator consisting of the transactionRequest and raw estimated transaction output
-export interface IEstimateParams {
-  steps?: ICommonStep[],
-  tr: ITransactionRequestWithEstimate;
-  inputAmountWei: bigint;
-  outputAmountWei: bigint;
-  inputDecimals: number;
-  outputDecimals: number;
-  approvalAddress: string;
-  gasEstimate: IGasEstimate;
-}
-
-/**
- * Normalizes `IEstimateParams` into `ITransactionRequestWithEstimate` with comparable exchange rate and estimated output.
- * @param o - The estimate parameters.
- * @returns The transaction request with estimates.
- */
-export function addEstimatesToTransactionRequest(o: IEstimateParams): ITransactionRequestWithEstimate {
-  const roundExps = [Math.max(o.inputDecimals - 8, 3), Math.max(o.outputDecimals - 8, 3)];
-  const amount = Number(BigInt(o.inputAmountWei) / BigInt(10 ** roundExps[0])) / (10 ** (o.inputDecimals - roundExps[0]));
-  o.tr.estimatedOutput = Number(BigInt(o.outputAmountWei) / BigInt(10 ** roundExps[1])) / (10 ** (o.outputDecimals - roundExps[1]));
-  o.tr.estimatedOutputWei = o.outputAmountWei.toString();
-  o.tr.estimatedExchangeRate = o.tr.estimatedOutput / amount;
-  o.tr.steps = o.steps ?? [];
-  o.tr.approvalAddress = o.approvalAddress;
-  o.tr.gasEstimate = o.gasEstimate;
-  return o.tr;
-}
-
-export interface IStatusParams {
-  aggregatorIds: string[];
-  transactionId: string;
-  fromChainId?: string;
-  toChainId?: string;
-  txHash?: string;
-}
-
-export enum OperationStatus {
-  WAITING = "WAITING",
-  PENDING = "PENDING",
-  DONE = "DONE",
-  FAILED = "FAILED",
-  SUCCESS = "SUCCESS",
-  NEEDS_GAS = "NEEDS_GAS",
-  ONGOING = "ON_GOING",
-  PARTIAL_SUCCESS = "PARTIAL_SUCCESS",
-  NOT_FOUND = "NOT_FOUND"
-}
-
-export interface OperationStep extends ICommonStep {
-  status: OperationStatus;
-  via: string;
-  substatusMessage?: string;
-}
-
-export interface IStatusResponse {
-  id: string;
-  status: OperationStatus;
-  txHash?: string;
-  receivingTx?: string;
-  sendingTx?: string;
-  substatus?: string;
-  substatusMessage?: string;
-}
-
-export async function getStatus (o: IStatusParams)
-  : Promise<IStatusResponse|null>{
-  o.aggregatorIds ??= aggregatorsAvailable;
-  if (!o.txHash) o.txHash = o.transactionId;
-  let status = (await Promise.all(
-  o.aggregatorIds.map(async (aggregatorId) => {
-    const aggregator = aggregatorById[aggregatorId];
-    return aggregator?.getStatus?.(o);
-  }))).filter(tr => !!tr);
-  return status[0] ?? null;
-}
-
-export * from "./types";
-export {
-  OneInch,
-  ZeroX,
-  ParaSwap,
-  KyberSwap,
-  Squid,
-  LiFi,
-  Socket
-}
+// JIT / Intent-Based (Not Implemented)
+// export * from "@/CowSwap";
+// export * from "@/Hashflow";
+// export * from "@/AirSwap";

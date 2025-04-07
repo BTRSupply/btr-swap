@@ -1,29 +1,20 @@
 {
   "compilerOptions": {
-    "target": "es2020",
-    "module": "commonjs",
-    "declaration": true,
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
     "outDir": "./dist",
     "rootDir": "./",
+    "declaration": true,
     "baseUrl": "./",
     "paths": {
-      "@/": ["./src/", "./contracts/"],
-    },
-    "strict": true,
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
+      "@/*": ["src/*"]
+    }
   },
-  "include": [
-    "./src/**/*",
-    "./contracts/**/*",
-    "./index.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "hardhat.config.ts",
-    "dist",
-    "cache",
-    "artifacts"
-  ]
+  "include": ["src/**/*", "tests/**/*", "index.ts"],
+  "exclude": ["node_modules", "dist", "artifacts"]
 }

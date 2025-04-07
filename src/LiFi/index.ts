@@ -1,513 +1,268 @@
-import qs from "qs";
-
 import {
-  addEstimatesToTransactionRequest,
-  IStatusResponse as ICommonStatusResponse,
-  OperationStatus,
-} from "../";
+  ILifiBestQuote,
+  ILifiGasSuggestionParams,
+  ILifiSwapStep,
+  ILifiToken,
+  ILifiTransactionStatus,
+} from "./types";
 
+import { BaseAggregator } from "@/abstract";
+import { AggId, IStatusResponse, OperationStatus } from "@/index";
 import {
-  IToken as ICommonToken,
-  IEstimate as ICommonEstimate,
+  IFeeCost,
+  IGasCost,
+  ICostEstimate,
+  IStatusParams,
   ISwapperParams,
-  validateQuoteParams,
+  IToken,
   ITransactionRequestWithEstimate,
   TransactionRequest,
-  IToolDetails,
-  ICommonStep,
-} from "../types";
+} from "@/types";
+import {
+  addEstimatesToTransactionRequest,
+  buildQueryParams,
+  formatError,
+  fetchJson,
+  mapKToKV,
+  weiToString,
+} from "@/utils";
 
-// LiFi specific types
-export interface ILifiContractCall {
-  fromAmount?: string;
-  fromTokenAddress?: string;
-  toContractAddress?: string;
-  toContractCallData?: string;
-  toContractGasLimit?: string;
-};
+/**
+ * LiFi aggregator implementation
+ */
+export class LiFi extends BaseAggregator {
+  constructor() {
+    super(AggId.LIFI);
+    // Set up router addresses for supported chains
+    this.routerByChainId = {
+      1: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE", // Ethereum
+      10: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE", // Optimism
+      56: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE", // BNB Chain
+      100: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE", // Gnosis Chain
+      137: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE", // Polygon
+      250: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE", // Fantom
+      8453: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE", // Base
+      59144: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE", // Linea
+      42161: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE", // Arbitrum
+      43114: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE", // Avalanche
+    };
+    // https://docs.li.fi/li.fi-api/li.fi-api/requesting-supported-chains
+    this.aliasByChainId = mapKToKV(this.routerByChainId);
+    this.approvalAddressByChainId = this.routerByChainId;
+  }
 
-interface IQuoteParams {
-  fromToken: string;
-  fromChain: string;
-  toToken: string;
-  toChain: string;
-  toAmount?: string;
-  fromAmount: number | string;
-  fromAddress: string;
-  toAddress?: string;
-  order?: "CHEAPEST" | "FASTEST" | "SAFEST" | "RECOMMENDED";
-  slippage?: number;
-  maxPriceImpact?: number;
-  integrator?: string;
-  referrer?: string;
-  allowDestinationCall?: boolean;
-  allowBridges?: string[];
-  allowExchanges?: boolean[];
-  denyBridges?: string[];
-  denyExchanges?: string[];
-  preferBridges?: string[];
-  preferExchanges?: boolean[];
-  contractCalls?: ILifiContractCall[];
-}
+  /**
+   * Calculates a gas estimate from costs arrays
+   */
+  private processCostEstimate = (gasCosts: IGasCost[], feeCosts: IFeeCost[]): ICostEstimate => ({
+    totalGasCostUsd: gasCosts.reduce((sum, cost) => sum + parseFloat(cost.amountUSD || "0"), 0),
+    totalGasCostWei: gasCosts.reduce((sum, cost) => sum + BigInt(cost.amount || "0"), BigInt(0)),
+    totalFeeCostUsd: feeCosts.reduce((sum, cost) => sum + parseFloat(cost.amountUSD || "0"), 0),
+    totalFeeCostWei: feeCosts.reduce((sum, cost) => sum + BigInt(cost.amount || "0"), BigInt(0)),
+  });
 
-interface IStatusParams {
-  txHash: string;
-  bridge?: string;
-  fromChain?: string;
-  toChain?: string;
-}
+  private getHeaders = (): Record<string, string> => ({
+    "Content-Type": "application/json",
+    ...(this.apiKey && { "X-API-Key": this.apiKey }),
+  });
 
-interface IGasSuggestionParams {
-  fromToken?: string;
-  fromChain?: string;
-  toChain?: string;
-}
+  protected convertParams = (p: ISwapperParams): Record<string, any> => {
+    p = this.validateQuoteParams(p);
+    return {
+      fromChain: p.inputChainId,
+      fromToken: p.input,
+      fromAddress: p.payer,
+      fromAmount: weiToString(p.amountWei),
+      toChain:
+        this.aliasByChainId[p.outputChainId ?? p.inputChainId] ||
+        (p.outputChainId ?? p.inputChainId).toString(),
+      toToken: p.output,
+      toAddress: p.receiver ?? p.payer,
+      integrator: p.integrator || this.integrator,
+      order: "RECOMMENDED",
+      ...(p.maxSlippage && { slippage: p.maxSlippage / 10000 }),
+      ...((this.referrer || p.referrer) && { referrer: p.referrer ?? this.referrer }),
+      ...(p.denyBridges?.length && { denyBridges: p.denyBridges.join(",") }),
+      ...(p.denyExchanges?.length && { denyExchanges: p.denyExchanges.join(",") }),
+    };
+  };
 
-export interface IToken {
-  address: string;
-  decimals: number;
-  symbol: string;
-  chainId: number;
-  coinKey?: string;
-  name: string;
-  logoURI?: string;
-  priceUSD?: string;
-}
+  private apiRequest = async <T = any>(
+    endpoint: string,
+    params?: Record<string, any>,
+    method: "GET" | "POST" = "GET",
+    body?: any,
+  ): Promise<T> => {
+    const url = new URL(`${this.baseApiUrl}/${endpoint}`);
 
-interface IBid {
-  user: string;
-  router: string;
-  initiator: string;
-  sendingChainId: number;
-  sendingAssetId: string;
-  amount: string;
-  receivingChainId: number;
-  receivingAssetId: string;
-  amountReceived: string;
-  receivingAddress: string;
-  transactionId: string;
-  expiry: number;
-  callDataHash: string;
-  callTo: string;
-  encryptedCallData: string;
-  sendingChainTxManagerAddress: string;
-  receivingChainTxManagerAddress: string;
-  bidExpiry: number;
-  bidSignature: string;
-  gasFeeInReceivingToken: string;
-  totalFee: string;
-  metaTxRelayerFee: string;
-  routerFee: string;
-}
+    if (method === "GET" && params) {
+      url.search = buildQueryParams(
+        Object.fromEntries(Object.entries(params).filter(([_, v]) => v !== undefined)),
+      );
+    }
 
-interface IData {
-  bid: IBid;
-}
+    return fetchJson<T>(url, {
+      method,
+      headers: this.getHeaders(),
+      body: method === "POST" && body ? JSON.stringify(body) : undefined,
+    });
+  };
 
-interface IFeeCost {
-  name: string;
-  description?: string;
-  percentage: string;
-  token: IToken;
-  amount?: string;
-  amountUSD: string;
-  included: boolean;
-}
-
-interface IGasCost {
-  type: string;
-  price?: string;
-  estimate?: string;
-  limit?: string;
-  amount: string;
-  amountUSD?: string;
-  token: IToken;
-}
-
-interface IEstimate {
-  fromAmount: string;
-  toAmount: string;
-  toAmountMin: string;
-  approvalAddress: string;
-  feeCosts: IFeeCost[];
-  gasCosts: IGasCost[];
-}
-
-interface IAction {
-  fromChainId: number;
-  fromAmount: string;
-  toChainId: number;
-  fromToken: IToken;
-  toToken: IToken;
-  slippage?: number;
-  fromAddress: string;
-  toAddress: string;
-}
-
-export interface IStep {
-  id: string;
-  type: string;
-  toolDetails: IToolDetails;
-  tool: string;
-  action: IAction;
-  data?: IData;
-  integrator?: string;
-  referrer?: string;
-  execution?: string;
-  estimate: IEstimate;
-  transactionRequest?: TransactionRequest;
-}
-
-interface IInsurance {
-  state: string;
-  feeAmountUsd: string;
-}
-
-interface IRoute {
-  id: string;
-  containsSwitchChain: boolean;
-  fromAmount: string;
-  fromAmountUSD: string;
-  fromChainId: number;
-  fromToken: IToken;
-  gasCostUSD: string;
-  insurance: IInsurance;
-  steps: IStep[];
-  tags: ('CHEAPEST' | 'FASTEST' | 'RECOMMENDED')[];
-  toAmount: string;
-  toAmountMin: string;
-  toAmountUSD: string;
-  toChainId: number;
-  toToken: IToken;
-}
-
-interface IQuote {
-  routes: IRoute[];
-  transactionRequest?: TransactionRequest;
-}
-
-interface IBestQuote extends IStep {
-  transactionRequest: TransactionRequest;
-  estimate: IEstimate;
-  includedSteps?: IStep[];
-}
-
-interface TransactionStatus {
-  transactionId: string;
-  sending: SendingDetails;
-  receiving: ReceivingDetails;
-  lifiExplorerLink: string;
-  fromAddress: string;
-  toAddress: string;
-  tool: string;
-  status: string;
-  substatus: string;
-  substatusMessage: string;
-  metadata: Metadata;
-  bridgeExplorerLink: string;
-}
-
-interface SendingDetails {
-  txHash: string;
-  txLink: string;
-  amount: string;
-  token: TokenDetails;
-  chainId: number;
-  gasPrice: string;
-  gasUsed: string;
-  gasToken: TokenDetails;
-  gasAmount: string;
-  gasAmountUSD: string;
-  amountUSD: string;
-  value: string;
-  timestamp: number;
-}
-
-interface ReceivingDetails {
-  txHash: string;
-  txLink: string;
-  amount: string;
-  token: TokenDetails;
-  chainId: number;
-  gasPrice: string;
-  gasUsed: string;
-  gasToken: TokenDetails;
-  gasAmount: string;
-  gasAmountUSD: string;
-  amountUSD: string;
-  value: string;
-  timestamp: number;
-}
-
-interface TokenDetails {
-  address: string;
-  chainId: number;
-  symbol: string;
-  decimals: number;
-  name: string;
-  coinKey: string;
-  logoURI: string;
-  priceUSD: string;
-}
-
-interface Metadata {
-  integrator: string;
-}
-
-const apiRoot = "https://li.quest/v1";
-const apiKey = process.env?.LIFI_API_KEY;
-
-export const convertParams = (o: ISwapperParams): IQuoteParams => ({
-  fromToken: o.input,
-  fromChain: networkById[o.inputChainId],
-  toToken: o.output,
-  // if no contractCall, no toAmount
-  toAmount: o.customContractCalls?.length ? o.amountWei?.toString() || undefined : undefined,
-  toChain: networkById[o.outputChainId ?? o.inputChainId],
-  fromAmount: o.amountWei.toString(),
-  fromAddress: o.testPayer ?? o.payer,
-  toAddress: o.receiver ?? o.payer,
-  order: "RECOMMENDED",
-  slippage: o.maxSlippage! / 10_000, // in % (eg. .001 = .1%)
-  maxPriceImpact: (o.maxSlippage! / 10_000) * 2, // in % (eg. .01 = 1%)
-  integrator: o.project ?? process.env.LIFI_PROJECT_ID ?? "astrolab",
-  // referrer: undefined,
-  allowDestinationCall: true,
-  contractCalls: o.customContractCalls?.length ? [{
-    fromAmount: o.amountWei.toString(),
-    fromTokenAddress: o.output,
-    toContractAddress: o.customContractCalls?.[0].toAddress,
-    toContractCallData: o.customContractCalls?.[0].callData,
-    toContractGasLimit: o.customContractCalls?.[0].gasLimit ?? '10000',
-  }] : undefined,
-  // allowBridges: [],
-  // allowExchanges: [],
-  denyBridges: o.denyBridges ?? [],
-  denyExchanges: o.denyExchanges ?? [],
-  // preferBridges: ["cctp", "hop", "across"],
-  // preferExchanges: [],
-});
-
-// cf. https://docs.li.fi/li.fi-api/li.fi-api/requesting-supported-chains
-// curl https://li.quest/v1/chains
-export const networkById: { [chainId: number]: string } = {
-  1: "eth",
-  10: "opt",
-  25: "cro",
-  56: "bsc",
-  66: "okt",
-  100: "dai",
-  106: "vel",
-  122: "fus",
-  137: "pol",
-  250: "ftm",
-  288: "bob",
-  324: "era",
-  1101: "pze",
-  1284: "moo",
-  1285: "mor",
-  8453: "bas",
-  59144: "lna",
-  42161: "arb",
-  42220: "cel",
-  43114: "ava",
-  1313161554: "aur",
-};
-
-export const routerByChainId: { [id: number]: string } = {
-  1: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  10: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  25: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  56: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  66: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  100: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  106: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  122: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  137: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  250: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  288: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  324: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  1101: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  1284: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  1285: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  8453: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  59144: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  42161: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  42220: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  43114: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-  1313161554: "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-};
-
-export const parseToken = (token: IToken): ICommonToken => {
-  return {
-    address: token.address,
+  private parseToken = (token: ILifiToken): IToken => ({
+    address: token.address ?? "",
     decimals: token.decimals,
     symbol: token.symbol,
-    chainId: token.chainId?.toString(),
+    chainId: token.chainId ?? 1,
     name: token.name,
     logoURI: token.logoURI,
     priceUSD: token.priceUSD,
-  };
-};
+  });
 
-export const parseEstimate = (estimate: IEstimate): ICommonEstimate => {
-  return {
-    fromAmount: estimate.fromAmount,
-    toAmount: estimate.toAmount,
-    toAmountMin: estimate.toAmountMin,
-    approvalAddress: estimate.approvalAddress,
-    feeCosts: estimate.feeCosts?.map((feeCost) => ({
-      ...feeCost,
-      token: parseToken(feeCost.token),
-    })),
-    gasCosts: estimate.gasCosts?.map((gasCost) => ({
-      ...gasCost,
-      token: parseToken(gasCost.token),
-    })),
-  };
-};
-
-export const parseSteps = (steps: IStep[]): [ICommonStep[], number, bigint, number, bigint] => {
-  let totalGasCostUsd = 0;
-  let totalGasCostWei = BigInt(0);
-  let totalFeeCostUsd = 0;
-  let totalFeeCostWei = BigInt(0);
-  const commonSteps = steps.map((step) => {
-    const estimate = parseEstimate(step.estimate);
-
-    estimate?.gasCosts?.forEach(gasCost => {
-      totalGasCostUsd += parseFloat(gasCost?.amountUSD ?? '0');
-      totalGasCostWei += BigInt(gasCost.amount);
-    });
-    estimate?.feeCosts?.forEach(feeCosts => {
-      totalFeeCostUsd += parseFloat(feeCosts?.amountUSD ?? '0');
-      totalFeeCostWei += BigInt(feeCosts.amount ?? '0');
-    });
-
-    return {
+  private parseSteps = (steps: ILifiSwapStep[]) =>
+    steps.map(step => ({
       id: step.id,
       type: step.type,
-      description: '',
-      fromToken: parseToken(step.action.fromToken),
-      toToken: parseToken(step.action.toToken),
+      description: "",
+      fromToken: this.parseToken(step.action.fromToken),
+      toToken: this.parseToken(step.action.toToken),
       fromAmount: step.action.fromAmount,
       fromChain: step.action.fromChainId,
       toChain: step.action.toChainId,
       slippage: step.action.slippage,
-      estimate,
+      estimate: {
+        fromAmount: step.estimate.fromAmount,
+        toAmount: step.estimate.toAmount,
+        toAmountMin: step.estimate.toAmountMin,
+        approvalAddress: step.estimate.approvalAddress,
+        gasCosts: step.estimate.gasCosts,
+        feeCosts: step.estimate.feeCosts,
+      },
       fromAddress: step.action.fromAddress,
       toAddress: step.action.toAddress,
       tool: step.tool,
       toolDetails: step.toolDetails,
-    };
-  });
+    }));
 
-  return [commonSteps, totalGasCostUsd, totalGasCostWei, totalFeeCostUsd, totalFeeCostWei];
-}
+  private processTransactionRequest = (
+    tr: TransactionRequest,
+    step: ILifiSwapStep,
+    includedSteps: ILifiSwapStep[] = [step],
+  ): ITransactionRequestWithEstimate => {
+    if (!tr.to || !tr.data) throw new Error("Incomplete transaction request");
 
-export async function getTransactionRequest(o: ISwapperParams): Promise<ITransactionRequestWithEstimate | undefined> {
-  const quote = o.customContractCalls?.length ? await getContractCallsQuote(o) : await getQuote(o);
-  const tr = quote?.transactionRequest as ITransactionRequestWithEstimate;
-  if (!tr) return;
-  const [steps, totalGasCostUsd, totalGasCostWei, totalFeeCostUsd, totalFeeCostWei] = parseSteps(quote!.includedSteps ?? []);
-  return addEstimatesToTransactionRequest({
-    steps,
-    tr,
-    inputAmountWei: BigInt(o.amountWei as string),
-    outputAmountWei: BigInt(quote!.estimate.toAmount),
-    inputDecimals: quote!.action.fromToken.decimals,
-    outputDecimals: quote!.action.toToken.decimals,
-    approvalAddress: quote!.estimate.approvalAddress ?? '',
-    gasEstimate: {
-      totalGasCostUsd,
-      totalGasCostWei: totalGasCostWei.toString(),
-      totalFeeCostUsd,
-      totalFeeCostWei: totalFeeCostWei.toString()
-    }
-  });
-}
+    tr.aggregatorId = this.id;
+    const steps = this.parseSteps(includedSteps);
+    const firstStep = steps[0];
+    if (!firstStep) throw new Error("No valid steps found");
 
-// cf. https://apidocs.li.fi/reference/post_quote-contractcalls
-// Perform multiple contract calls across blockchains
-export async function getContractCallsQuote(o: ISwapperParams): Promise<IBestQuote | undefined> {
-  if (!apiKey) console.warn("missing env.LIFI_API_KEY, using public");
-  if (!validateQuoteParams(o)) throw new Error("invalid input");
-  const url = `${apiRoot}/quote/contractCalls`;
-  const body = convertParams(o);
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        accept: 'application/json',
-        'content-type': 'application/json',
-        ...(apiKey ? { "x-lifi-api-key": apiKey } : {})
-      },
-      body: JSON.stringify(body),
+    const inputAmountWei = BigInt(firstStep.fromAmount ?? "0");
+    const outputAmountWei = BigInt(step.estimate.toAmount);
+    if (inputAmountWei === 0n || outputAmountWei === 0n)
+      throw new Error("Step zero input or output amount detected");
+
+    const approvalAddress =
+      step.estimate.approvalAddress || this.getApprovalAddress(firstStep.fromChain);
+    if (!approvalAddress)
+      throw new Error(`No approval address found for chain ${firstStep.fromChain}`);
+
+    return addEstimatesToTransactionRequest({
+      tr,
+      steps,
+      inputAmountWei,
+      outputAmountWei,
+      inputDecimals: firstStep.fromToken?.decimals ?? 0,
+      outputDecimals: steps[steps.length - 1]?.toToken?.decimals ?? 0,
+      approvalAddress,
+      costEstimate: this.processCostEstimate(
+        step.estimate.gasCosts || [],
+        step.estimate.feeCosts || [],
+      ),
     });
-    if (res.status >= 400)
-      throw new Error(`${res.status}: ${res.statusText} - ${await res.text?.() ?? '?'}`);
-    return await res.json();
-  } catch (e) {
-    console.error(`getContractCallsQuote failed: ${e}`);
-  }
-}
+  };
 
-// cf. https://apidocs.li.fi/reference/get_quote
-// Get a quote for your desired transfer
-export async function getQuote(o: ISwapperParams): Promise<IBestQuote | undefined> {
-  if (!apiKey) console.warn("missing env.LIFI_API_KEY, using public");
-  if (!validateQuoteParams(o)) throw new Error("invalid input");
-  const params = convertParams(o);
-  const url = `${apiRoot}/quote?${qs.stringify(params)}`;
-  try {
-    const res = await fetch(url, {
-      headers: apiKey ? { "x-lifi-api-key": apiKey } : {},
-    });
-    if (res.status >= 400)
-      throw new Error(`${res.status}: ${res.statusText} - ${await res.text?.() ?? '?'}`);
-    return await res.json();
-  } catch (e) {
-    console.log(`getQuote failed: ${e}`);
-  }
-}
-
-export function parseTransactionStatus(status: TransactionStatus): ICommonStatusResponse {
-  const commonStatus: ICommonStatusResponse = {
-    id: status.transactionId,
-    status: status.status as OperationStatus,
-    txHash: status.receiving?.txHash,
-    receivingTx: status.receiving.txHash,
-    sendingTx: status.sending.txHash,
+  private parseTransactionStatus = (status: ILifiTransactionStatus): IStatusResponse => ({
+    id: status.transactionId || "",
+    status:
+      {
+        DONE: OperationStatus.DONE,
+        PENDING: OperationStatus.PENDING,
+        FAILED: OperationStatus.FAILED,
+        NOT_FOUND: OperationStatus.NOT_FOUND,
+      }[status.status?.toUpperCase() ?? ""] ?? OperationStatus.PENDING,
     substatus: status.substatus,
     substatusMessage: status.substatusMessage,
+    txHash: status.sending?.txHash,
+    sendingTx: status.sending?.txHash,
+    receivingTx: status.receiving?.txHash,
+  });
+
+  public async getQuote(p: ISwapperParams): Promise<ILifiBestQuote | undefined> {
+    try {
+      const response = await this.apiRequest<ILifiBestQuote>("quote", this.convertParams(p));
+      return response;
+    } catch (error) {
+      this.handleError(error, "[LiFi] getQuote");
+      return undefined;
+    }
   }
-  return commonStatus;
+
+  public async getTransactionRequest(
+    p: ISwapperParams,
+  ): Promise<ITransactionRequestWithEstimate | undefined> {
+    try {
+      const quote = await this.getQuote(p);
+      if (!quote?.estimate || !quote?.transactionRequest) {
+        throw formatError("Failed to get a valid quote from LiFi", 400, quote);
+      }
+
+      return this.processTransactionRequest(quote.transactionRequest, quote, [quote]);
+    } catch (error) {
+      this.handleError(error, "[LiFi] getTransactionRequest");
+      return undefined;
+    }
+  }
+
+  public async getStatus(p: IStatusParams): Promise<IStatusResponse | undefined> {
+    try {
+      if (!p.txHash) {
+        throw new Error("Missing transaction hash for LiFi getStatus");
+      }
+
+      const statusResponse = await this.apiRequest<ILifiTransactionStatus>("status", {
+        txHash: p.txHash,
+      });
+
+      if (!statusResponse?.status) {
+        if (statusResponse?.sending?.txHash === p.txHash) {
+          return { id: p.txHash, status: OperationStatus.PENDING };
+        }
+        throw formatError("Failed to get a valid status from LiFi", 404, statusResponse);
+      }
+
+      return this.parseTransactionStatus(statusResponse);
+    } catch (error) {
+      this.handleError(error, "[LiFi] getStatus");
+      return undefined;
+    }
+  }
+
+  public async gasSuggestion(p: ILifiGasSuggestionParams): Promise<unknown> {
+    try {
+      if (!p.fromChain || !p.toChain || !p.fromToken || !p.toToken)
+        throw formatError("Missing required params", 400, p);
+
+      return this.apiRequest<unknown>("gas", {
+        fromChain: p.fromChain,
+        toChain: p.toChain,
+        fromToken: p.fromToken,
+        toToken: p.toToken,
+      });
+    } catch (error) {
+      this.handleError(error, "LiFi gasSuggestion");
+      throw error;
+    }
+  }
 }
 
-// Check the status of your cross-chain transfers
-// while (result.status !== "DONE" && result.status !== "FAILED")
-//   result = await getStatus(quote.tool, fromChain, toChain, tx.hash);
-export async function getStatus(o: IStatusParams)
-: Promise<ICommonStatusResponse|undefined> {
-  if (!apiKey) console.warn("missing env.LIFI_API_KEY");
-  try {
-    const res = await fetch(`${apiRoot}/status?${qs.stringify(o)}`);
-    if (res.status >= 400)
-      throw new Error(`${res.status}: ${res.statusText}`);
-    return parseTransactionStatus(await res.json());
-  } catch (e) {
-    console.log(`getStatus failed: ${e}`);
-  }
-}
-
-export async function gasSuggestion(o: IGasSuggestionParams) {
-  if (!apiKey) console.warn("missing env.LIFI_API_KEY");
-  try {
-    const res = await fetch(`${apiRoot}/gas/suggestion/${o.toChain}?${qs.stringify(o)}`);
-    if (res.status >= 400)
-      throw new Error(`${res.status}: ${res.statusText}`);
-    return await res.json();
-  } catch (e) {
-    console.error(`estimateGas failed: ${e}`);
-  }
-}
+// Export an instance of the class
+export const lifiAggregator = new LiFi();

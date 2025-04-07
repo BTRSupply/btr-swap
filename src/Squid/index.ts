@@ -1,444 +1,282 @@
-import qs from "qs";
 import {
-  IStatusResponse as ICommonStatusResponse,
-  OperationStatus,
-  addEstimatesToTransactionRequest
-} from "../";
+  ISquidAction,
+  ISquidCustomCall,
+  ISquidEstimate,
+  ISquidQuoteResponse,
+  ISquidToken,
+  ISquidTransactionStatus,
+  SquidCallType,
+} from "./types";
+
+import { BaseAggregator } from "@/abstract";
+import { IStatusResponse, OperationStatus } from "@/index";
 import {
-  ICommonStep,
+  AggId,
+  ChainType,
   ICustomContractCall,
+  IStatusParams,
   ISwapperParams,
   ITransactionRequestWithEstimate,
-  TransactionRequest,
-  validateQuoteParams,
-  IToken as ICommonToken
-} from "../types";
+} from "@/types";
+import {
+  addEstimatesToTransactionRequest,
+  emptyCostEstimate,
+  fetchJson,
+  formatError,
+  mapKToKV,
+} from "@/utils";
 
-// Squid specific types
-interface IQuoteParams {
-  enableBoost: boolean;
-  toChain: string | number;
-  toToken: string;
-  fromChain: string | number;
-  fromToken: string;
-  fromAddress: string;
-  fromAmount: number | string;
-  slippage: number | string;
-  slippageConfig?: {
-    autoMode: number;
+export class Squid extends BaseAggregator {
+  constructor() {
+    super(AggId.SQUID);
+    this.routerByChainId = {
+      1: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+      10: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+      56: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+      137: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+      250: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+      314: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+      1284: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+      2222: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+      5000: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+      8453: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+      42161: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+      42220: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+      43114: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+      59144: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+      534352: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+    };
+    this.aliasByChainId = mapKToKV(this.routerByChainId);
+    this.approvalAddressByChainId = this.routerByChainId;
+  }
+
+  private getHeaders = (includeAccept = false): Record<string, string> => ({
+    "Content-Type": "application/json",
+    "x-integrator-id": this.integrator,
+    ...(includeAccept && { accept: "application/json" }),
+    ...(this.apiKey && { "api-key": this.apiKey }),
+  });
+
+  private apiRequest = async <T = any>(
+    endpoint: string,
+    params?: Record<string, any>,
+    method: "GET" | "POST" = "GET",
+    body?: any,
+  ): Promise<T> => {
+    const url = new URL(`${this.baseApiUrl}/${endpoint}`);
+
+    if (method === "GET" && params) {
+      const urlParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) urlParams.append(key, String(value));
+      });
+      url.search = urlParams.toString();
+    }
+
+    return fetchJson<T>(url, {
+      method,
+      headers: this.getHeaders(method === "GET"),
+      body: method === "POST" && body ? JSON.stringify(body) : undefined,
+    });
   };
-  toAddress: string;
-  quoteOnly?: boolean;
-  customContractCalls?: ICustomContractCall[];
-  postHook?: IPostHook;
-  prefer?: string[];
-  receiveGasOnDestination?: boolean;
-  integrator?: string;
-}
 
-export enum SquidCallType {
-  DEFAULT = 0,
-  FULL_TOKEN_BALANCE = 1,
-  FULL_NATIVE_BALANCE = 2,
-  COLLECT_TOKEN_BALANCE = 3, // unused in hooks
-}
-
-export enum ChainType {
-  EVM = "evm",
-  Cosmos = "cosmos"
-}
-
-interface IPostHook {
-  chainType: ChainType;
-  calls: ISquidCustomCall[];
-}
-
-export interface ISquidCustomCall {
-  chainType: ChainType;
-  callType: SquidCallType;
-  target: string;
-  value: string;
-  callData: string;
-  payload: {
-    tokenAddress: string,
-    inputPos: number,
-  },
-  estimatedGas: string;
-}
-
-interface IStatusParams {
-  transactionId: string;
-  fromChainId?: string;
-  toChainId?: string;
-  integrator?: string;
-}
-
-export interface IToken {
-  type: string;
-  chainId: string;
-  address?: string;
-  name: string;
-  symbol: string;
-  axelarNetworkSymbol?: string;
-  decimals: number;
-  logoURI: string;
-  coingeckoId: string;
-  subGraphId: string;
-  subGraphOnly?: boolean;
-  usdPrice: number;
-}
-
-interface CustomData {
-  poolFees: number[];
-  swapGasEstimate: string;
-}
-
-interface ISwap {
-  chainId: string;
-  dex: string;
-  factory: string;
-  quoterV2: string;
-  swapRouter: string;
-  path: string[];
-  slippage: number;
-  custom: CustomData;
-  target: string;
-}
-
-interface IBridgeCall {
-  name: string;
-  provider: string;
-  type: string;
-}
-
-export interface IAction {
-  type: string;
-  chainType: string;
-  data: ISwap | IBridgeCall;
-  fromChain: string;
-  toChain: string;
-  fromToken: IToken;
-  toToken: IToken;
-  fromAmount: string;
-  toAmount: string;
-  toAmountMin: string;
-  exchangeRate: string;
-  priceImpact: string;
-  stage: number;
-  provider: string;
-  description: string;
-}
-
-interface IQuoteResponse {
-  route: IRoute;
-}
-
-interface IFeeCosts {
-  amount: string;
-  amountUsd: string;
-  description: string;
-  gasLimit: string;
-  gasMultiplier: string;
-  name: string;
-  token: IToken;
-}
-
-interface IGasCosts {
-  amount: string;
-  amountUsd: string;
-  gasLimit: string;
-  name: string;
-  token: IToken;
-  type: string;
-}
-
-interface IEstimate {
-  fromAmount: string;
-  fromAmountUSD: string;
-  sendAmount: string;
-  toAmount: string;
-  toAmountUSD: string;
-  actions: IAction[];
-  feeCosts: IFeeCosts[];
-  gasCosts: IGasCosts[];
-  exchangeRate: string;
-  estimatedRouteDuration: number;
-  aggregatePriceImpact: string;
-  aggregateSlippage: string;
-  isBoostSupported: boolean;
-  toToken: IToken;
-  fromToken: IToken;
-}
-
-interface ITransactionRequest extends TransactionRequest {
-  routeType: string;
-  target: string;
-  targetAddress?: string;
-}
-
-interface IRoute {
-  estimate: IEstimate;
-  params: IQuoteParams;
-  transactionRequest: ITransactionRequest;
-}
-type TransactionStatus = {
-  id: string;
-  status: string;
-  gasStatus: string;
-  isGMPTransaction: boolean;
-  axelarTransactionUrl: string;
-  fromChain: ChainInfo;
-  toChain: ChainInfo;
-  timeSpent: TimeSpent;
-  error: TransactionError;
-  squidTransactionStatus: string;
-};
-
-type ChainInfo = {
-  transactionId: string;
-  blockNumber: number;
-  callEventStatus: string;
-  callEventLog: any[];
-  chainData: any;
-  transactionUrl: string;
-};
-
-type TimeSpent = {
-  call_express_executed: number;
-  express_executed_confirm: number;
-  call_confirm: number;
-  call_approved: number;
-  express_executed_approved: number;
-  total: number;
-  approved_executed: number;
-};
-
-type TransactionError = {
-  message: string;
-  txHash: string;
-  chain: string;
-};
-
-
-const apiRoot = "https://v2.api.squidrouter.com/v2";
-const apiKey = process.env?.SQUID_API_KEY;
-
-const generateHook = (contractCall: ICustomContractCall, outputToken: string)
-  : ISquidCustomCall => {
-  return {
+  private generateHook = (call: ICustomContractCall, outputToken: string): ISquidCustomCall => ({
     chainType: ChainType.EVM,
     callType: SquidCallType.FULL_TOKEN_BALANCE,
-    target: contractCall.toAddress!,
+    target: call.toAddress!,
     value: "0",
-    callData: contractCall.callData,
-    payload: {
-      tokenAddress: outputToken,
-      inputPos: contractCall.inputPos ?? 0,
-    },
-    estimatedGas: contractCall.gasLimit ?? "20000"
-  }
-}
-
-export const convertParams = (o: ISwapperParams): IQuoteParams => ({
-  enableBoost: true,
-  fromToken: o.input,
-  fromChain: o.inputChainId!.toString(),
-  toToken: o.output,
-  toChain: (o.outputChainId ?? o.inputChainId).toString(),
-  fromAddress: o.payer ?? o.testPayer,
-  fromAmount: o.amountWei.toString(),
-  toAddress: o.receiver ?? o.payer,
-  slippage: o.maxSlippage! / 100, // in % (eg. .001 = .1%)
-  slippageConfig: {
-    autoMode: 1,
-  },
-  quoteOnly: false, // false == no transaction request
-  receiveGasOnDestination: o.receiveGasOnDestination ?? false,
-  integrator: process.env?.SQUID_PROJECT_ID ?? "astrolab-api",
-  postHook: o.customContractCalls?.length ?
-  {
-    chainType: ChainType.EVM,
-    calls: o.customContractCalls.map((c) => generateHook(c, o.output))
-  } : undefined,
-});
-
-export const routerByChainId: { [id: number]: string } = {
-  1: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
-  10: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
-  56: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
-  137: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
-  250: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
-  314: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
-  1284: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
-  2222: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
-  5000: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
-  8453: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
-  42161: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
-  42220: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
-  43114: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
-  59144: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
-  534352: "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
-  // "osmosis-1": "",
-  // "cosmoshub-4": "",
-  // "kaiyo-1": "",
-  // "neutron-1": "",
-  // "stargaze-1": "",
-  // "axelar-dojo-1": "",
-  // "umee-1": "",
-  // "secret-4": "",
-  // "core-1": "",
-  // "sommelier-3": "",
-  // "stride-1": "",
-  // "injective-1": "",
-  // "crescent-1": "",
-  // "phoenix-1": "",
-  // "juno-1": "",
-  // "evmos_9001-2": "",
-  // "carbon-1": "",
-  // "regen-1": "",
-  // "agoric-3": "",
-  // "chihuahua-1": "",
-  // "akashnet-2": "",
-  // "comdex-1": "",
-  // "archway-1": "",
-  // "quicksilver-2": "",
-  // "omniflixhub-1": "",
-  // "migaloo-1": "",
-  // "mars-1": "",
-  // "columbus-5": "",
-  // "mantle-1": "",
-  // "gravity-bridge-3": "",
-  // "bitcanna-1": "",
-  // "bitsong-2b": "",
-  // "cheqd-mainnet-1": "",
-  // "mainnet-3": "",
-  // "desmos-mainnet": "",
-  // "irishub-1": "",
-  // "ixo-5": "",
-  // "jackal-1": "",
-  // "likecoin-mainnet-2": "",
-  // "lum-network-1": "",
-  // "sentinelhub-2": "",
-  // "noble-1": "",
-  // "pirin-1": "",
-  // "dydx-mainnet-1": "",
-  // "celestia": "",
-};
-
-export const parseSteps = (steps: IAction[]): ICommonStep[] => {
-  const commonSteps: ICommonStep[] = [];
-  for (const step of steps) {
-    commonSteps.push({
-      type: step.type,
-      description: step.description,
-      fromToken: parseToken(step.fromToken),
-      toToken: parseToken(step.toToken),
-      fromAmount: step.fromAmount ?? '0',
-      toAmount: step.toAmount ?? '0',
-      fromChain: parseInt(step.fromChain),
-      toChain: parseInt(step.toChain ?? '0'),
-      tool: step.provider,
-      toolDetails: {
-        key: step.provider,
-        logoURI: '',
-        name: step.provider,
-      }
-    });
-  }
-  return commonSteps;
-}
-
-export const parseToken = (token: IToken): ICommonToken => {
-  return {
-    address: token?.address ?? '',
-    decimals: token?.decimals ?? 0,
-    symbol: token?.symbol ?? '',
-    chainId: token?.chainId ?? '',
-    name: token?.name ?? '',
-    logoURI: token?.logoURI ?? '',
-    priceUSD: token?.usdPrice?.toString()  ?? '0',
-  };
-};
-
-export async function getTransactionRequest(o: ISwapperParams)
-  : Promise<ITransactionRequestWithEstimate | undefined> {
-  const quote = await getQuote(o) as IQuoteResponse;
-  const tr = quote?.route.transactionRequest as (ITransactionRequest & ITransactionRequestWithEstimate);
-  if (!tr) return;
-  tr.to ??= tr.target ?? tr.targetAddress;
-  const gasCosts = [...quote.route.estimate.gasCosts, ...quote.route.estimate.feeCosts];
-  return addEstimatesToTransactionRequest({
-    steps: parseSteps(quote!.route.estimate.actions ?? []),
-    tr,
-    inputAmountWei: BigInt(o.amountWei as string),
-    outputAmountWei: BigInt(quote!.route.estimate.toAmount),
-    inputDecimals: quote!.route.estimate.fromToken.decimals,
-    outputDecimals: quote!.route.estimate.toToken.decimals,
-    approvalAddress: tr.to,
-    gasEstimate: {
-      totalGasCostUsd: quote.route.estimate.gasCosts.map((c) => parseFloat(c.amountUsd === '' ? '0': c.amountUsd)).reduce((a, b) => a + b, 0),
-      totalGasCostWei: BigInt(quote.route.estimate.gasCosts.map((c) => c.amount).reduce((a, b) => BigInt(a) + BigInt(b), BigInt(0))).toString(),
-      totalFeeCostUsd: quote.route.estimate.feeCosts.map((c) => parseFloat(c.amountUsd === '' ? '0': c.amountUsd)).reduce((a, b) => a + b, 0),
-      totalFeeCostWei: BigInt(quote.route.estimate.feeCosts.map((c) => c.amount).reduce((a, b) => BigInt(a) + BigInt(b), BigInt(0))).toString(),
-    }
+    callData: call.callData,
+    payload: { tokenAddress: outputToken, inputPos: call.inputPos ?? 0 },
+    estimatedGas: call.gasLimit ?? "20000",
   });
-}
 
-// cf. https://apidocs.li.fi/reference/get_quote
-// Get a quote for your desired transfer
-export async function getQuote(o: ISwapperParams): Promise<IQuoteResponse | undefined> {
-  if (!apiKey) console.warn("missing env.SQUID_API_KEY, using public");
-  if (!validateQuoteParams(o)) throw new Error("invalid input");
-  const params = convertParams(o);
-  const url = `${apiRoot}/route`;
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-integrator-id": params.integrator!,
-        ...(apiKey && { "api-key": apiKey }),
-      },
-      body: JSON.stringify(params),
+  protected convertParams = (p: ISwapperParams): Record<string, any> => {
+    const baseParams = {
+      enableBoost: true,
+      fromToken: p.input,
+      fromChain: p.inputChainId.toString(),
+      toToken: p.output,
+      toChain: (p.outputChainId ?? p.inputChainId).toString(),
+      fromAddress: p.payer ?? p.testPayer,
+      fromAmount: p.amountWei.toString(),
+      toAddress: p.receiver ?? p.payer,
+      slippage: p.maxSlippage! / 100,
+      slippageConfig: { autoMode: 1 },
+      quoteOnly: false,
+      receiveGasOnDestination: p.receiveGasOnDestination ?? false,
+      integrator: this.integrator,
+    };
+
+    return p.customContractCalls?.length
+      ? {
+          ...baseParams,
+          postHook: {
+            chainType: ChainType.EVM,
+            calls: p.customContractCalls.map(c => this.generateHook(c, p.output)),
+          },
+        }
+      : baseParams;
+  };
+
+  private parseToken = (token?: ISquidToken) => ({
+    address: token?.address ?? "",
+    decimals: token?.decimals ?? 0,
+    symbol: token?.symbol ?? "",
+    chainId: token?.chainId ?? "",
+    name: token?.name ?? "",
+    logoURI: token?.logoURI ?? "",
+    priceUSD: token?.usdPrice?.toString() ?? "0",
+  });
+
+  private parseSteps = (actions?: ISquidAction[]) =>
+    !actions
+      ? []
+      : actions.map(step => ({
+          type: step.type,
+          description: step.description,
+          fromToken: this.parseToken(step.fromToken),
+          toToken: this.parseToken(step.toToken),
+          fromAmount: step.fromAmount ?? "0",
+          toAmount: step.toAmount ?? "0",
+          fromChain: parseInt(step.fromChain),
+          toChain: parseInt(step.toChain ?? "0"),
+          tool: step.provider,
+          toolDetails: { key: step.provider, logoURI: "", name: step.provider },
+        }));
+
+  private processCostEstimate = (estimate: ISquidEstimate) => {
+    const costs = emptyCostEstimate();
+
+    if (estimate.gasCosts?.length) {
+      costs.totalGasCostUsd = estimate.gasCosts
+        .map(c => parseFloat(c.amountUsd === "" ? "0" : c.amountUsd))
+        .reduce((a, b) => a + b, 0);
+
+      costs.totalGasCostWei = estimate.gasCosts
+        .map(c => (c.amount ? BigInt(c.amount) : BigInt(0)))
+        .reduce((a, b) => a + b, BigInt(0));
+    }
+
+    if (estimate.feeCosts?.length) {
+      costs.totalFeeCostUsd = estimate.feeCosts
+        .map(c => parseFloat(c.amountUsd === "" ? "0" : c.amountUsd))
+        .reduce((a, b) => a + b, 0);
+
+      costs.totalFeeCostWei = estimate.feeCosts
+        .map(c => (c.amount ? BigInt(c.amount) : BigInt(0)))
+        .reduce((a, b) => a + b, BigInt(0));
+    }
+
+    return costs;
+  };
+
+  private processTransactionRequest = (
+    tr: Partial<ITransactionRequestWithEstimate>,
+    quoteData: ISquidQuoteResponse,
+  ): ITransactionRequestWithEstimate => {
+    if (!tr.to || !tr.data) throw new Error("Incomplete transaction request");
+    tr.aggregatorId = this.id;
+
+    const steps = this.parseSteps(quoteData.route?.estimate.actions);
+    const fromToken = quoteData.route?.estimate.fromToken;
+    const toToken = quoteData.route?.estimate.toToken;
+
+    return addEstimatesToTransactionRequest({
+      tr: tr as ITransactionRequestWithEstimate,
+      steps,
+      inputAmountWei: BigInt(quoteData.route?.estimate.fromAmount || "0"),
+      outputAmountWei: BigInt(quoteData.route?.estimate.toAmount || "0"),
+      inputDecimals: fromToken?.decimals ?? 18,
+      outputDecimals: toToken?.decimals ?? 18,
+      approvalAddress: quoteData.route?.transactionRequest?.targetAddress || tr.to,
+      costEstimate: this.processCostEstimate(quoteData.route?.estimate ?? {}),
     });
-    if (res.status >= 400)
-      throw new Error(`${res.status}: ${res.statusText} - ${await res.text?.() ?? '?'}`);
-    return await res.json();
-  } catch (e) {
-    console.error(`getQuote failed: ${e}`);
-  }
-}
+  };
 
-export function parseTransactionStatus(status: TransactionStatus): ICommonStatusResponse {
-  const commonStatus: ICommonStatusResponse = {
-    id: status.id,
-    status: status.squidTransactionStatus as OperationStatus,
-    txHash: status.toChain.transactionUrl,
-    receivingTx: status.toChain.transactionUrl,
-    sendingTx: status.fromChain.transactionUrl,
-    substatus: status.status,
-    substatusMessage: status.error?.message ?? '',
-  }
-  return commonStatus;
-}
+  public async getQuote(p: ISwapperParams): Promise<ISquidQuoteResponse | undefined> {
+    try {
+      const response = await this.apiRequest<ISquidQuoteResponse>("route", this.convertParams(p));
 
-// Check the status of your cross-chain transfers
-// while (result.status !== "DONE" && result.status !== "FAILED")
-//   result = await getStatus(quote.tool, fromChain, toChain, tx.hash);
-export async function getStatus(o: IStatusParams)
-  : Promise<ICommonStatusResponse|undefined> {
-  if (!apiKey) console.warn("missing env.SQUID_API_KEY");
-  try {
-    const res = await fetch(`${apiRoot}/status?${qs.stringify(o)}`, {
-      headers: {
-        "x-integrator-id": o.integrator! ?? "astrolab-api",
-        ...(apiKey && { "api-key": apiKey }),
+      if (!response?.route) {
+        throw formatError("Failed to fetch a valid quote from Squid", 400, response);
       }
-    });
-    if (res.status >= 400)
-      throw new Error(`${res.status}: ${res.statusText}`);
-    return parseTransactionStatus(await res.json());
-  } catch (e) {
-    console.error(`getStatus failed: ${e}`);
+
+      return response;
+    } catch (error) {
+      this.handleError(error, "[Squid] getQuote");
+      return undefined;
+    }
+  }
+
+  public async getTransactionRequest(
+    p: ISwapperParams,
+  ): Promise<ITransactionRequestWithEstimate | undefined> {
+    try {
+      const quote = await this.getQuote(p);
+      if (!quote?.route?.transactionRequest) {
+        throw formatError("No transaction request found in Squid quote", 400, quote);
+      }
+
+      const txRequest = quote.route.transactionRequest;
+      const routerAddress = this.getRouterAddress(p.inputChainId);
+
+      if (routerAddress && txRequest.targetAddress !== routerAddress) {
+        console.warn(
+          `Squid router mismatch: expected ${routerAddress}, got ${txRequest.targetAddress}`,
+        );
+      }
+
+      return this.processTransactionRequest(
+        {
+          to: txRequest.targetAddress,
+          data: txRequest.data,
+          value: txRequest.value ? BigInt(txRequest.value.toString()) : BigInt(0),
+          from: p.payer,
+          chainId: parseInt(p.inputChainId.toString()),
+        },
+        quote,
+      );
+    } catch (error) {
+      this.handleError(error, "[Squid] getTransactionRequest");
+      return undefined;
+    }
+  }
+
+  public async getStatus(p: IStatusParams): Promise<IStatusResponse | undefined> {
+    try {
+      if (!p.txHash) {
+        throw new Error("Transaction hash is required for Squid status check");
+      }
+
+      const response = await this.apiRequest<ISquidTransactionStatus>(
+        `status?transactionId=${p.txHash}`,
+      );
+
+      return {
+        id: p.txHash,
+        status:
+          {
+            SUBMITTED: OperationStatus.PENDING,
+            PENDING: OperationStatus.PENDING,
+            EXECUTED: OperationStatus.PENDING,
+            SUCCESS: OperationStatus.DONE,
+            FAILED: OperationStatus.FAILED,
+            REFUNDED: OperationStatus.FAILED,
+            CANCELLED: OperationStatus.FAILED,
+          }[response.status] || OperationStatus.PENDING,
+        txHash: response.id,
+        receivingTx: response.id,
+        substatus: response.status,
+        substatusMessage: response.error?.message || "",
+      };
+    } catch (error) {
+      if (error instanceof Error && error.message?.includes("Transaction not found")) {
+        return { id: p.txHash || "", status: OperationStatus.NOT_FOUND };
+      }
+      this.handleError(error, "[Squid] getStatus");
+      return undefined;
+    }
   }
 }
+
+export const squidAggregator = new Squid();
