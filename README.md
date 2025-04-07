@@ -62,6 +62,7 @@ Don't hesitate to reach out or submit pull requests with missing aggregators ada
 - [Hashflow](https://www.hashflow.com/) `planned`
 - [1inch Fusion](https://fusion.1inch.io/) `planned`
 - [ParaSwap Delta](https://www.paraswap.io/) `planned`
+- [Bebop](https://https://bebop.xyz/) `planned`
 - [DeBridge](https://debridge.finance/) `planned`
 - [AirSwap](https://www.airswap.io/) `disabled`
 
@@ -69,8 +70,8 @@ Don't hesitate to reach out or submit pull requests with missing aggregators ada
 
 ### Swapper SDK
 
-[![NPM Version](https://img.shields.io/npm/v/@btrsupply/swap.svg)](https://www.npmjs.com/package/@btrsupply/swap)
-[![License](https://img.shields.io/npm/l/@btrsupply/swap.svg)](https://github.com/BTRSupply/btr-swap/blob/main/LICENSE)
+[![NPM Version](https://img.shields.io/npm/v/@btr-supply/swap.svg)](https://www.npmjs.com/package/@btr-supply/swap)
+[![License](https://img.shields.io/npm/l/@btr-supply/swap.svg)](https://github.com/BTRSupply/btr-swap/blob/main/LICENSE)
 
 Generic Swap+Bridge aggregator SDK for EVM-compatible chains.
 
@@ -87,11 +88,11 @@ This SDK provides a unified interface to fetch swap quotes and transaction data 
 ## Installation
 
 ```bash
-npm install @btrsupply/swap
+npm install @btr-supply/swap
 # or
-yarn add @btrsupply/swap
+yarn add @btr-supply/swap
 # or
-bun add @btrsupply/swap
+bun add @btr-supply/swap
 ```
 
 ## Usage
@@ -105,7 +106,7 @@ import {
   AggId, // Enum for aggregator identifiers
   ISwapperParams,
   ITransactionRequestWithEstimate
-} from "@btrsupply/swap";
+} from "@btr-supply/swap";
 
 async function fetchSwapQuote() {
   const params: ISwapperParams = {
@@ -161,7 +162,7 @@ A simple CLI tool is provided for quick testing and quotes.
 
 ```bash
 # Install globally (optional)
-# npm install -g @btrsupply/swap
+# npm install -g @btr-supply/swap
 
 # Basic quote (defaults to LiFi, Squid, Socket, Unizen, Rango aggregators)
 # bunx used here for execution without global install
