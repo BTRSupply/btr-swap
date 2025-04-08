@@ -49,16 +49,15 @@ Don't hesitate to reach out or submit pull requests with missing aggregators ada
 - [KyberSwap](https://kyberswap.com/) `stable` `tested`
 - [OpenOcean](https://openocean.finance/) `stable` `tested`
 - [Firebird](https://firebird.finance/) `stable` `tested`
-- [Bebop](https://bebop.xyz/) `planned` `disabled`
 
 ### JIT / Intent-Based / RFQ
-> These protocols often offer MEV protection and gasless swaps but require specific handling (like off-chain signatures) which requires special implementations.
+> These protocols often offer MEV protection, gasless swaps, and access to off-chain liquidity, but require specific handling (eg. permit2 EIP-712 off-chain signatures) which requires multi-step implementation.
 
 - [CowSwap](https://swap.cow.fi/) `planned`
 - [Hashflow](https://www.hashflow.com/) `planned`
 - [1inch Fusion](https://fusion.1inch.io/) `planned`
 - [ParaSwap Delta](https://www.paraswap.io/) `planned`
-- [Bebop](https://https://bebop.xyz/) `planned`
+- [Bebop](https://bebop.xyz/) `planned`
 - [DeBridge](https://debridge.finance/) `planned`
 - [AirSwap](https://www.airswap.io/) `disabled`
 
