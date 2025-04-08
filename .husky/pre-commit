@@ -4,10 +4,6 @@
 # Run lint-staged for code formatting and linting
 # bun lint-staged
 
-# Run prettier check
-echo "Running prettier check..."
-bun run prettier:check
-
 # Run eslint check
 echo "Running eslint check..."
 bun run eslint:check
@@ -15,6 +11,10 @@ bun run eslint:check
 # Run type checking
 echo "Running type checking..."
 bun run typecheck
+
+# Run prettier fix
+echo "Running prettier fix..."
+bun run prettier:fix
 
 # Run tests
 # echo "Running tests..."

@@ -5,8 +5,8 @@
     <strong>A powerful cross-chain swap aggregation SDK</strong>
   </p>
   <p>
-    <!-- <a href="https://github.com/AstrolabFinance/swapper/actions"><img alt="Build Status" src="https://github.com/AstrolabFinance/swapper/actions/workflows/tests.yaml/badge.svg" /></a> -->
     <a href="https://t.me/BTRSupply"><img alt="Telegram" src="https://img.shields.io/badge/Telegram--white?style=social&logo=telegram"></a>
+    <a href="https://www.npmjs.com/package/@btr-supply/swap"><img alt="Package" src="https://img.shields.io/npm/v/@btr-supply/swap.svg"/></a>
     <a href="https://btr.supply/docs"><img alt="Docs" src="https://img.shields.io/badge/Docs-v1-green?logo=readthedocs" /></a>
     <a href="https://opensource.org/licenses/MIT"><img alt="License" src="https://img.shields.io/badge/license-MIT-green?logo=open-source-initiative" /></a>
   </p>
@@ -15,6 +15,17 @@
 BTR Swap is a liquidity meta-aggregator, powering monochain and cross-chain swaps.
 It blends liquidity and bridge aggregators.
 The DEX meta-aggregation was inspired by [LlamaSwap](https://swap.defillama.com/)'s work [available here](https://github.com/LlamaSwap/), supercharged with cross-chain capacity.
+
+## 🚀 Versatile Integration Options
+
+BTR Swap offers multiple ways to integrate with your project:
+
+- **CLI Tool**: Use the command-line interface for quick integration with any back-end system or scripts
+- **TypeScript/JavaScript SDK**: Import the library in your Node.js, Bun, or Deno back-end applications
+- **Browser-Compatible**: Use directly in front-end applications with no additional dependencies
+- **Zero-Config**: Works out of the box with sensible defaults while remaining highly customizable
+
+Whether you're building a DeFi dashboard, a trading bot, or integrating swap functionality into an existing application, BTR Swap provides the flexibility to fit your specific needs.
 
 ## ⚠️ Disclaimer
 BTR and its core team members will not be held accountable for losses related to the deployment and use of this repository's codebase.
@@ -65,9 +76,6 @@ Don't hesitate to reach out or submit pull requests with missing aggregators ada
 
 ### Swapper SDK
 
-[![NPM Version](https://img.shields.io/npm/v/@btr-supply/swap.svg)](https://www.npmjs.com/package/@btr-supply/swap)
-[![License](https://img.shields.io/npm/l/@btr-supply/swap.svg)](https://github.com/BTRSupply/btr-swap/blob/main/LICENSE)
-
 Generic Swap+Bridge aggregator SDK for EVM-compatible chains.
 
 This SDK provides a unified interface to fetch swap quotes and transaction data from various DEX aggregators and bridges.
@@ -78,7 +86,10 @@ This SDK provides a unified interface to fetch swap quotes and transaction data 
 *   **Aggregator Support:** Integrates with popular DEX aggregators and cross-chain protocols.
 *   **Best Route Selection:** Automatically finds the best quote across supported aggregators (optional).
 *   **Extensible:** Designed to easily add support for new aggregators.
+*   **Multi-Platform:** Works in Node.js, Bun, Deno back-ends and directly in browsers.
+*   **Zero Dependencies:** Front-end compatible with no external runtime dependencies.
 *   **CLI Tool:** Includes a command-line interface for quick quotes and testing.
+*   **Type Safety:** Full TypeScript support with comprehensive type definitions.
 
 ## Installation
 
@@ -92,13 +103,15 @@ bun add @btr-supply/swap
 
 ## Usage
 
-### ESM Import (Recommended)
+BTR Swap can be used in multiple environments:
+
+### 1. Back-end SDK (Node.js, Bun, Deno)
 
 ```typescript
 import {
-  getTransactionRequest, // Fetches the best quote across specified aggregators
-  getAllTransactionRequests, // Fetches quotes from ALL specified aggregators
-  AggId, // Enum for aggregator identifiers
+  getTransactionRequest,
+  getAllTransactionRequests,
+  AggId,
   ISwapperParams,
   ITransactionRequestWithEstimate
 } from "@btr-supply/swap";
@@ -115,90 +128,99 @@ async function fetchSwapQuote() {
     outputSymbol: "DAI",
     amountWei: BigInt("1000000000000000000"), // 1 ETH in wei (use BigInt for large numbers)
     payer: "0xYourWalletAddress", // Address initiating the swap
-    // Optional parameters:
-    // receiver: "0xOptionalDifferentReceiverAddress", // Defaults to payer
     maxSlippage: 50, // Max slippage in Basis Points (BPS) -> 0.5%
-    aggregatorId: [AggId.LIFI, AggId.SQUID], // Specify aggregators (defaults to LiFi, Squid, Socket, Unizen, Rango if omitted)
-    integrator: "YourDappName", // Your integrator/project ID
-    // apiKeys: { [AggId.SOCKET]: "YOUR_SOCKET_API_KEY" } // Optional API keys if needed
+    aggregatorId: [AggId.LIFI, AggId.SQUID], // Specify aggregators
   };
 
-  try {
-    // Fetch the single best quote from the specified aggregators
-    const bestQuote: ITransactionRequestWithEstimate | undefined =
-      await getTransactionRequest(params);
+  // Get the best quote
+  const bestQuote = await getTransactionRequest(params);
 
-    if (bestQuote) {
-      console.log("Best Quote Found:");
-      console.log(JSON.stringify(bestQuote, (key, value) =>
-        typeof value === 'bigint' ? value.toString() : value // Convert BigInts for JSON
-      , 2));
-      // Now you can use bestQuote.to, bestQuote.data, bestQuote.value etc. to send the transaction
-    } else {
-      console.log("No route found.");
-    }
-
-    // --- OR --- Fetch quotes from ALL specified aggregators
-    // const allQuotes: ITransactionRequestWithEstimate[] =
-    //   await getAllTransactionRequests(params);
-    // console.log(`Found ${allQuotes.length} quotes:`, allQuotes);
-
-  } catch (error) {
-    console.error("Error fetching quote:", error);
-  }
+  // Execute the transaction with your provider of choice
+  // const txReceipt = await provider.sendTransaction(bestQuote);
 }
-
-fetchSwapQuote();
 ```
 
-### CLI Tool
+### 2. Front-end Integration
 
-A simple CLI tool is provided for quick testing and quotes.
+```typescript
+// In a browser environment (React, Vue, etc.)
+import { getTransactionRequest, AggId } from "@btr-supply/swap";
+
+// In a React component
+async function handleSwap() {
+  try {
+    setLoading(true);
+
+    const params = {
+      inputChainId: 1,
+      input: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", // ETH
+      output: "0x6B175474E89094C44Da98b954EedeAC495271d0F", // DAI
+      amountWei: BigInt(amount), // Convert from user input
+      payer: address, // Connected wallet address
+      maxSlippage: 30, // 0.3%
+    };
+
+    const quote = await getTransactionRequest(params);
+
+    // Send the transaction using ethers, web3.js, viem, or wagmi
+    const tx = await walletClient.sendTransaction({
+      to: quote.to,
+      data: quote.data,
+      value: quote.value,
+      gas: quote.gas
+    });
+
+    // Handle transaction result
+  } catch (error) {
+    console.error("Swap failed:", error);
+  } finally {
+    setLoading(false);
+  }
+}
+```
+
+### 3. CLI Tool Usage
+
+The package includes a CLI tool for quick testing and integration in scripts or automation workflows:
 
 ```bash
-# Install globally (optional)
-# npm install -g @btr-supply/swap
+# Install globally
+npm install -g @btr-supply/swap
 
-# Basic quote (defaults to LiFi, Squid, Socket, Unizen, Rango aggregators)
-# bunx used here for execution without global install
-bunx btr-swap-cli quote \
+# Basic usage (defaults to all supported meta-aggregators)
+btr-swap-cli quote \
   --input-chain 1 \
   --input-token 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE \
   --output-token 0x6B175474E89094C44Da98b954EedeAC495271d0F \
   --amount-wei 1e18 \
   --payer 0xYourWalletAddress
 
-# Specify aggregator (1inch), max slippage (0.3%), and integrator ID
-bunx btr-swap-cli quote \
-  --input-chain 1 \
-  --input-token 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE \
-  --output-token 0x6B175474E89094C44Da98b954EedeAC495271d0F \
-  --amount-wei 1e18 \
-  --payer 0xYourWalletAddress \
-  --aggregators ${AggId.ONE_INCH} \
-  --max-slippage 30 \
-  --integrator-id MyCoolDapp
-
-# Cross-chain quote, fetch from all specified aggregators
-bunx btr-swap-cli quote \
+# Cross-chain quote with specific aggregators
+btr-swap-cli quote \
   --input-chain 1 \
   --input-token 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE \
   --output-chain 10 \
   --output-token 0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1 \
   --amount-wei 1e18 \
   --payer 0xYourWalletAddress \
-  --aggregators ${AggId.LIFI} ${AggId.SOCKET} ${AggId.SQUID} \
+  --aggregators LIFI SOCKET SQUID \
   --all
 
-# Pass API keys via JSON
-bunx btr-swap-cli quote \
-  --input-chain 1 --output-chain 10 ... \
-  --aggregators ${AggId.SOCKET} \
-  --apiKeys '{"${AggId.SOCKET}":"YOUR_SOCKET_KEY"}'
+# Shell integration example
+QUOTE=$(btr-swap-cli quote --input-chain 1 --output-chain 10 --input-token ETH --output-token DAI --amount-wei 1e18 --payer $WALLET_ADDRESS --json)
+TX_DATA=$(echo $QUOTE | jq -r '.data')
+TX_TO=$(echo $QUOTE | jq -r '.to')
+
+# Pass API keys via environment variables or JSON
+export SOCKET_API_KEY="your-socket-key"
+export LIFI_API_KEY="your-lifi-key"
+btr-swap-cli quote --input-chain 1 --output-chain 10 ...
 
 # Get help
-bunx btr-swap-cli quote --help
+btr-swap-cli quote --help
 ```
+
+You can use the CLI tool in CI/CD pipelines, automated trading systems, or for quick manual testing.
 
 ## Testing Strategy
 
