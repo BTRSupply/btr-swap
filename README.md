@@ -1,22 +1,18 @@
 <div align="center">
-  <img border-radius="25px" max-height="250px" src="./swapper.png" />
+  <img border-radius="25px" max-height="250px" src="./banner.png" />
   <h1>BTR Swap</h1>
   <p>
-    <strong>Actively maintained fork of <a href="https://github.com/AstrolabDAO/swapper">AstrolabDAO/swapper</a></strong>
+    <strong>A powerful cross-chain swap aggregation SDK</strong>
   </p>
   <p>
     <!-- <a href="https://github.com/AstrolabFinance/swapper/actions"><img alt="Build Status" src="https://github.com/AstrolabFinance/swapper/actions/workflows/tests.yaml/badge.svg" /></a> -->
-    <a href="https://opensource.org/licenses/MIT"><img alt="License" src="https://img.shields.io/github/license/BTRSupply/btr-swap?color=3AB2FF" /></a>
-    <a href="https://discord.gg/PtAkTCwueu"><img alt="Discord Chat" src="https://img.shields.io/discord/984518964371673140"/></a>
-    <a href="https://docs.astrolab.fi"><img alt="Astrolab Docs" src="https://img.shields.io/badge/astrolab_docs-F9C3B3" /></a>
+    <a href="https://t.me/BTRSupply"><img alt="Telegram" src="https://img.shields.io/badge/Telegram--white?style=social&logo=telegram"></a>
+    <a href="https://btr.supply/docs"><img alt="Docs" src="https://img.shields.io/badge/Docs-v1-green?logo=readthedocs" /></a>
+    <a href="https://opensource.org/licenses/MIT"><img alt="License" src="https://img.shields.io/badge/license-MIT-green?logo=open-source-initiative" /></a>
   </p>
 </div>
 
-# BTR Swap
-
-This repository is an actively maintained fork of [AstrolabDAO/swapper](https://github.com/AstrolabDAO/swapper), enhanced and adapted for BTR Supply's specific needs.
-
-Swapper is a liquidity meta-aggregator, powering monochain and cross-chain swaps.
+BTR Swap is a liquidity meta-aggregator, powering monochain and cross-chain swaps.
 It blends liquidity and bridge aggregators.
 The DEX meta-aggregation was inspired by [LlamaSwap](https://swap.defillama.com/)'s work [available here](https://github.com/LlamaSwap/), supercharged with cross-chain capacity.
 
@@ -253,18 +249,18 @@ bun run test
 bun run build
 ```
 
-## About this Fork
+## About
 
-This repository is a fork of the original [AstrolabDAO/swapper](https://github.com/AstrolabDAO/swapper) that is being actively maintained by [BTR Supply](https://github.com/BTRSupply). Our fork includes several enhancements and modifications:
+BTR Swap includes several enhancements and features:
 
-- Updated API keys management
+- Unified interface for DEX and cross-chain aggregation
+- Advanced API keys management
 - Enhanced error handling
-- Additional aggregator support
-- Performance improvements
-- Updated dependencies
-- BTR Supply specific configurations and integrations
+- Comprehensive aggregator support
+- Performance optimizations
+- BTR-specific configurations and integrations
 
-While we aim to stay compatible with the original codebase, our primary goal is to support BTR Supply's specific requirements and use cases. We may periodically sync with the upstream repository to incorporate beneficial changes and fixes.
+Based on the [AstrolabDAO/swapper](https://github.com/AstrolabDAO/swapper) codebase, we maintain compatibility while adding features to support BTR Supply's specific requirements. We periodically sync with the upstream repository to incorporate beneficial changes and fixes.
 
 ## Contributing
 
