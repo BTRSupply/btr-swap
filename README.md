@@ -12,25 +12,27 @@
   </p>
 </div>
 
-BTR Swap is a liquidity meta-aggregator powering monochain and cross-chain swaps, blending liquidity and bridge aggregators. Inspired by [LlamaSwap](https://swap.defillama.com/)'s work [available here](https://github.com/LlamaSwap/), with enhanced cross-chain capabilities.
+BTR Swap is a liquidity meta-aggregator powering monochain and cross-chain swaps, blending liquidity and bridge aggregators. Inspired by [LlamaSwap](https://github.com/LlamaSwap/), server-side friendly and cross-chain capable.
 
-## 🚀 Integration Options
-
-- **CLI Tool**: Quick integration with any back-end system or scripts
-- **SDK**: For Node.js, Bun, Deno back-ends and browser front-ends
-- **Zero-Config**: Works out-of-the-box with sensible defaults
+[ESM compliant](https://nodejs.org/api/esm.html), feather light, BTR Swap can be embedded in any front-end or back-end application, either as:
+- **CLI**: Quick integration with any existing back-end or scripts
+- **SDK**: For Node.js, Bun, Deno back-ends and browser front-ends, whether your app uses [Ethers](https://docs.ethers.org/) or [Viem](https://viem.sh/)
 
 ## ⚠️ Disclaimer
-BTR and its core team members will not be held accountable for losses related to the deployment and use of this repository's codebase. The code is provided as-is and is under active development.
+
+This aggregator is under active development and not a commercial product.
+BTR and its team members are not liable for any losses from using this codebase. The code is provided as-is and underlying APIs may change.
+
+We welcome issues for bugs or feature requests, and pull requests to improve the package.
 
 ## Features
 
-* **Unified Interface:** One interface for multiple swap protocols
-* **Best Route Selection:** Auto-finds optimal quotes across aggregators
-* **Cross-Platform:** Works in Node.js, Bun, Deno and browsers
-* **No Dependencies:** Front-end compatible with no external runtime dependencies
-* **Type Safety:** Full TypeScript support with comprehensive types
-* **Comprehensive Support:** Wide range of aggregators and protocols
+* **Unified Interface:** Single API for monochain and cross-chain swaps
+* **Any Chain, Any Token:** Aggregates liquidity and bridges for token swaps across any supported chains and tokens
+* **Best Route Selection:** Finds optimal quotes across multiple aggregators
+* **Zero Dependencies:** Lightweight implementation for any environment
+* **Type Safety:** Comprehensive TypeScript support
+* **Multi-Platform:** Works in Node.js, Bun, Deno and browsers
 
 ## Supported Aggregators
 
@@ -65,9 +67,7 @@ BTR and its core team members will not be held accountable for losses related to
 ## Installation
 
 ```bash
-npm install @btr-supply/swap
-# or yarn add @btr-supply/swap
-# or bun add @btr-supply/swap
+npm/yarn/bun add @btr-supply/swap
 ```
 
 ## Usage
@@ -170,10 +170,6 @@ BTR Swap enhances the [AstrolabDAO/swapper](https://github.com/AstrolabDAO/swapp
 - Optimized performance
 - Enhanced error handling
 - Extended aggregator support
-
-## Contributing
-
-Contributions welcome! Feel free to open issues or pull requests.
 
 ## License
 
