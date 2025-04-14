@@ -1,0 +1,124 @@
+name: Create GitHub Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.VERSION }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build packages
+        run: bun run build
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Set package versions to tag version
+        run: bun run scripts/release.js ${{ steps.get_version.outputs.VERSION }}
+
+      - name: Extract release notes
+        id: extract_release_notes
+        uses: ffurrer2/extract-release-notes@v1
+        with:
+          changelog_file: CHANGELOG.md
+
+      - name: Pack npm packages for release assets
+        run: |
+          cd packages/core
+          npm pack
+          mv btr-supply-swap-${{ steps.get_version.outputs.VERSION }}.tgz ../../btr-supply-swap-${{ steps.get_version.outputs.VERSION }}.tgz
+          cd ../cli
+          npm pack
+          mv btr-supply-swap-cli-${{ steps.get_version.outputs.VERSION }}.tgz ../../btr-supply-swap-cli-${{ steps.get_version.outputs.VERSION }}.tgz
+          cd ../.. # Return to root directory
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release v${{ steps.get_version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: ${{ steps.extract_release_notes.outputs.release_notes }}
+          files: |
+            btr-supply-swap-${{ steps.get_version.outputs.VERSION }}.tgz
+            btr-supply-swap-cli-${{ steps.get_version.outputs.VERSION }}.tgz
+
+      # Upload artifacts for publish jobs to use
+      - name: Upload built packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-packages
+          path: packages/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        registry:
+          - name: npmjs
+            url: https://registry.npmjs.org
+            token: NPM_TOKEN
+          - name: github
+            url: https://npm.pkg.github.com
+            token: GITHUB_TOKEN
+            scope: btr-supply
+        package:
+          - path: core
+            name: swap
+          - path: cli
+            name: swap-cli
+    steps:
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          name: built-packages
+          path: packages/
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets[matrix.registry.token] }}
+        with:
+          node-version: "20"
+          registry-url: ${{ matrix.registry.url }}
+          scope: ${{ matrix.registry.scope }}
+
+      - name: Publish ${{ matrix.package.name }} to ${{ matrix.registry.name }}
+        working-directory: ./packages/${{ matrix.package.path }}
+        run: |
+          echo "--- Publishing --- ${{ matrix.package.name }} to ${{ matrix.registry.name }} ---"
+          if [[ "${{ matrix.package.name }}" == "swap-cli" ]]; then
+            sleep 5
+          fi
+          npm publish
+
+      # - name: Verify npm publication
+      #   if: ${{ matrix.registry.name == 'npmjs' && matrix.package.name == 'swap-cli' }}
+      #   run: |
+      #     sleep 10
+      #     npm view @btr-supply/${{ matrix.package.name }}@${{ needs.build.outputs.version }} --registry=${{ matrix.registry.url }}

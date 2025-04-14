@@ -1,0 +1,57 @@
+{
+  "name": "btr-swap-monorepo",
+  "version": "1.25.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/btr-supply/btr-swap.git"
+  },
+  "author": "BTR Supply <contact@btr.supply>",
+  "license": "MIT",
+  "description": "Generic Bridge+Swap aggregator for compatible EVMs",
+  "scripts": {
+    "format:check": "prettier --check packages/**/*.{ts,js} '*.{js,json,md}'",
+    "format:fix": "prettier --write packages/**/*.{ts,js} '*.{js,json,md}'",
+    "lint": "oxlint . && bun run format:check",
+    "lint:fix": "bun run format:fix && oxlint --fix .",
+    "build": "bun scripts/build.js",
+    "typecheck": "bun run typecheck:core && bun run typecheck:cli",
+    "typecheck:core": "bun --cwd packages/core tsc --noEmit",
+    "typecheck:cli": "bun --cwd packages/cli tsc --noEmit",
+    "test": "bun run test:unit && bun run test:integration",
+    "test:unit": "bun test --timeout 10000 ./tests/unit/*.test.ts",
+    "test:simple": "bun test --timeout 30000 ./tests/integration/simple-mono.test.ts",
+    "test:fuzz": "bun test --timeout 30000 ./tests/integration/fuzz.test.ts",
+    "test:cli": "bun test --timeout 30000 ./tests/integration/cli.test.ts",
+    "test:integration": "bun test --timeout 30000 ./tests/integration/*.test.ts",
+    "release": "bun run scripts/release.js $BUMP_TYPE",
+    "pre-commit": "bun run lint:fix && bun run build && bun run typecheck && bun run test:unit",
+    "commit:version": "VERSION=$(node -p \"require('./package.json').version\") && git add . && git commit -m \"chore: bump version to v$VERSION\"",
+    "push-tag": "VERSION=$(node -p \"require('./package.json').version\") && git tag -a v$VERSION -m \"Release v$VERSION: @btr-supply/swap and @btr-supply/swap-cli\" && git push origin v$VERSION",
+    "publish:patch": "BUMP_TYPE=patch bun run release && bun run commit:version && bun run push-tag",
+    "publish:minor": "BUMP_TYPE=minor bun run release && bun run commit:version && bun run push-tag",
+    "publish:major": "BUMP_TYPE=major bun run release && bun run commit:version && bun run push-tag",
+    "install:cli": "cd packages/cli && npm install -g .",
+    "setup": "bun install && bun run build && bun run install:cli",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.9",
+    "bun-plugin-dts": "^0.3.0",
+    "prettier": "^3.5.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.0",
+    "oxlint": "^0.16.5",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.5.4"
+  },
+  "lint-staged": {
+    "*.{js,ts}": [
+      "oxlint --fix"
+    ]
+  }
+}

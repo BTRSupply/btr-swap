@@ -1,0 +1,28 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "baseUrl": ".",
+    "moduleResolution": "Node",
+    "module": "ESNext",
+    "resolveJsonModule": true,
+    "paths": {
+      "@btr-supply/swap": [
+        "../core/dist"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ],
+  "references": [
+    {
+      "path": "../core"
+    } // CLI depends on core
+  ]
+}

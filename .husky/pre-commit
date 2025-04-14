@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+# Run pre-commit script
+echo "Running pre-commit workflow..."
+bun run pre-commit
