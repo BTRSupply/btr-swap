@@ -1,6 +1,6 @@
 {
   "name": "@btr-supply/swap",
-  "version": "1.25.0",
+  "version": "1.27.0",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -57,5 +57,8 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.5.4"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

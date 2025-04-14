@@ -115,7 +115,7 @@ jobs:
           if [[ "${{ matrix.package.name }}" == "swap-cli" ]]; then
             sleep 5
           fi
-          npm publish
+          npm publish --access public
 
       # - name: Verify npm publication
       #   if: ${{ matrix.registry.name == 'npmjs' && matrix.package.name == 'swap-cli' }}

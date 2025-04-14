@@ -1,6 +1,6 @@
 {
   "name": "btr-swap-monorepo",
-  "version": "1.25.0",
+  "version": "1.27.0",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -29,7 +29,7 @@
     "test:cli": "bun test --timeout 30000 ./tests/integration/cli.test.ts",
     "test:integration": "bun test --timeout 30000 ./tests/integration/*.test.ts",
     "release": "bun run scripts/release.js $BUMP_TYPE",
-    "pre-commit": "bun run lint:fix && bun run build && bun run typecheck && bun run test:unit",
+    "pre-commit": "bun run lint:fix && bun run build && bun run typecheck && bun run test:unit && git add -A",
     "commit:version": "VERSION=$(node -p \"require('./package.json').version\") && git add . && git commit -m \"chore: bump version to v$VERSION\"",
     "push-tag": "VERSION=$(node -p \"require('./package.json').version\") && git tag -a v$VERSION -m \"Release v$VERSION: @btr-supply/swap and @btr-supply/swap-cli\" && git push origin v$VERSION",
     "publish:patch": "BUMP_TYPE=patch bun run release && bun run commit:version && bun run push-tag",
