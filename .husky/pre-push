@@ -1,0 +1,6 @@
+#!/bin/sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run the check script with the --check-push flag
+# This checks the branch name and all pushed commit messages
+exec bun run validate:pre-push

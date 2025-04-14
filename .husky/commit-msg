@@ -1,0 +1,4 @@
+#!/bin/sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+exec bun run validate:commit-msg --commit-msg-file="$1"

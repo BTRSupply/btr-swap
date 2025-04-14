@@ -1,6 +1,6 @@
 {
   "name": "btr-swap-monorepo",
-  "version": "1.27.0",
+  "version": "1.25.0",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -29,6 +29,9 @@
     "test:cli": "bun test --timeout 30000 ./tests/integration/cli.test.ts",
     "test:integration": "bun test --timeout 30000 ./tests/integration/*.test.ts",
     "release": "bun run scripts/release.js $BUMP_TYPE",
+    "validate:commit-msg": "bun ./scripts/check-name.js --check-commit",
+    "validate:branch-name": "bun ./scripts/check-name.js --check-branch",
+    "validate:pre-push": "bun ./scripts/check-name.js --check-push",
     "pre-commit": "bun run lint:fix && bun run build && bun run typecheck && bun run test:unit && git add -A",
     "commit:version": "VERSION=$(node -p \"require('./package.json').version\") && git add . && git commit -m \"chore: bump version to v$VERSION\"",
     "push-tag": "VERSION=$(node -p \"require('./package.json').version\") && git tag -a v$VERSION -m \"Release v$VERSION: @btr-supply/swap and @btr-supply/swap-cli\" && git push origin v$VERSION",
@@ -42,10 +45,10 @@
   "devDependencies": {
     "@types/bun": "^1.2.9",
     "bun-plugin-dts": "^0.3.0",
-    "prettier": "^3.5.3",
     "husky": "^9.1.7",
     "lint-staged": "^15.5.0",
     "oxlint": "^0.16.5",
+    "prettier": "^3.5.3",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.5.4"
   },

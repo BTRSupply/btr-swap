@@ -300,11 +300,47 @@ BTR Swap enhances the [AstrolabDAO/swapper](https://github.com/AstrolabDAO/swapp
 Contributions are welcome! Please follow these steps:
 
 1. Fork the repository.
-2. Create a new branch for your feature or bug fix.
+2. Create a new branch for your feature or bug fix, following the naming convention below.
 3. Make your changes.
 4. Ensure code quality by running `bun run pre-commit`.
-5. Commit your changes with clear messages.
+5. Commit your changes with clear messages, following the commit message convention below.
 6. Push your branch and open a pull request.
+
+### Branch Naming Convention
+
+Branch names must be prefixed with one of the following types, followed by a `/` and a short description:
+
+- `feat/`: For new features (e.g., `feat/odos-aggregator`)
+- `fix/`: For bug fixes (e.g., `fix/lifi-quote-error`)
+- `refac/`: For code refacing or internal improvements (e.g., `refac/simplify-routing`)
+- `ops/`: For operations, tooling, or dependency updates (e.g., `ops/update-bun-version`)
+- `docs/`: For documentation changes (e.g., `docs/add-cli-examples`)
+
+### Commit Message Convention
+
+Commit messages must be prefixed with one of the following types enclosed in square brackets `[]`:
+
+- `[feat]`: Introduces new user-facing functionality.
+  - _Example_: `[feat] add support for Odos aggregator`
+- `[fix]`: Corrects user-facing bugs.
+  - _Example_: `[fix] resolve issue causing login failure on Safari`
+- `[refac]`: Internal code changes improving structure, performance, or style. Does not add features or fix user-facing bugs. Includes performance (`perf`) and style changes (`style`).
+  - _Example_: `[refac] simplify cart calculation logic`
+  - _Example_: `[refac] improve API response time by adding index`
+  - _Example_: `[refac] apply linter rules across project`
+- `[ops]`: Build process, CI, dependencies, tooling changes. No production code logic changes. Includes `build`, `ci`, `chore`.
+  - _Example_: `[ops] upgrade node version in Dockerfile`
+  - _Example_: `[ops] fix flaky integration test in CI pipeline`
+- `[docs]`: Changes solely to documentation.
+  - _Example_: `[docs] clarify API rate limits`
+
+**Summary:**
+
+- `[feat]`: New stuff for users.
+- `[fix]`: Fixing broken stuff for users.
+- `[refac]`: Improving internal code (structure, speed, style).
+- `[ops]`: Build, tooling, dependencies, CI/CD.
+- `[docs]`: Writing stuff down.
 
 ### Code Style and Linting
 
