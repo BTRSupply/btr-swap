@@ -1,22 +1,23 @@
 # BTR Swap Changelog
 
-All changes to this project will be documented in this log file.
-Based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and adhering to [SemVer](https://semver.org/spec/v2.0.0.html).
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for details on commit message categories.
+All changes documented here, based on [Keep a Changelog](https://keepachangelog.com).
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
-NB: This file is [generated from commit history](./scripts/release.js), DO NOT EDIT MANUALLY.
+NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
-## [1.26.0] - 2025-04-15
+## [1.27.0] - 2025-04-15
 
 ### Fixes
 
 - [fix] Added 'git add -u' after 'lint:fix' in 'pre-commit' to stage fixed already-tracked files
+- [fix] Updated/fixed 'release.js' release script to remove dangling github tags from failed publishing, and changelog generation fix
+- [fix] Updated/fixed 'release.js' release script to replace changelog entry in case of a publish failure
 
 ### Ops
 
 - [ops] Enhance git hooks and release automation
 
-## [1.25.0] - 2025-04-14
+## [1.26.0] - 2025-04-14
 
 ### Features
 

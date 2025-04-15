@@ -7,6 +7,7 @@ const PKG = './package.json';
 const LOG = resolve('./CHANGELOG.md');
 const DEPS = [resolve('./packages/core/package.json'), resolve('./packages/cli/package.json')];
 
+// Clean dangling tags and bump version
 const cleanupDanglingTags = () => {
   try {
     const { version } = JSON.parse(readFileSync(PKG, 'utf8'));
@@ -28,6 +29,7 @@ const cleanupDanglingTags = () => {
 
 cleanupDanglingTags();
 
+// Calculate new version
 const bumpType = process.argv[2];
 if (!bumpType) {
   console.error('Error: Provide bump type (major|minor|patch) or version');
@@ -51,6 +53,7 @@ if (newVer === pkg.version) {
   process.exit(0);
 }
 
+// Update all package.json files
 [PKG, ...DEPS].forEach(path => {
   if (!existsSync(path)) return;
   const data = JSON.parse(readFileSync(path, 'utf8'));
@@ -59,12 +62,20 @@ if (newVer === pkg.version) {
   writeFileSync(path, JSON.stringify(data, null, 2) + '\n');
 });
 
-const DEFAULT_HEADER = `# BTR Swap Changelog\n\nAll changes documented here.\nBased on [Keep a Changelog](https://keepachangelog.com).\nSee CONTRIBUTING.md for details.\n\nNB: Auto-generated from commits - DO NOT EDIT.\n\n`;
+// Update changelog
+const DEFAULT_HEADER = `# BTR Swap Changelog\n\nAll changes documented here, based on [Keep a Changelog](https://keepachangelog.com).\nSee [CONTRIBUTING.md](./CONTRIBUTING.md) for details.\n\nNB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.\n\n`;
 let log = existsSync(LOG) ? readFileSync(LOG, 'utf8') : DEFAULT_HEADER;
 log = log.includes('# BTR Swap Changelog') ? log : DEFAULT_HEADER;
 
-if (log.includes(`## [${newVer}]`)) process.exit(1);
+// Remove all existing entries for this version if they exist
+while (log.includes(`## [${newVer}]`)) {
+  const startPos = log.indexOf(`## [${newVer}]`);
+  let endPos = log.indexOf('## [', startPos + 1);
+  if (endPos === -1) endPos = log.length;
+  log = log.substring(0, startPos) + log.substring(endPos);
+}
 
+// Categorize commits since last tag
 const typeMap = {
   '[feat]': 'Features',
   '[fix]': 'Fixes',
@@ -80,14 +91,19 @@ try {
     .toString().split('\n')
     .filter(c => c && !c.startsWith('Merge '))
     .forEach(commit => {
-      const [prefix] = Object.entries(typeMap).find(([p]) => commit.toLowerCase().startsWith(p.toLowerCase())) || [];
+      // Use exact matching for commit prefixes to avoid partial matches
+      const prefix = Object.keys(typeMap).find(p =>
+        commit.toLowerCase().startsWith(p.toLowerCase())
+      );
+
       if (prefix) {
-        const msg = commit.replace(new RegExp(prefix, 'i'), '').trim();
+        const msg = commit.replace(new RegExp(`^${prefix}`, 'i'), '').trim();
         categorized[typeMap[prefix]].push(msg[0].toUpperCase() + msg.slice(1));
       }
     });
 } catch (e) { console.warn('Warning: Commit fetch error:', e.message) }
 
+// Generate and insert changelog entry
 Object.values(categorized).forEach(c => c.sort());
 const entry = `## [${newVer}] - ${new Date().toISOString().slice(0, 10)}\n\n${Object.entries(categorized)
   .filter(([, c]) => c.length)
