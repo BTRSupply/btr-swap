@@ -36,6 +36,10 @@ import {
  * @see https://docs.socket.tech/eip7683#architecture
  */
 export class Socket extends BaseAggregator {
+  /**
+   * Initializes the Socket aggregator.
+   * Sets up router addresses and aliases for supported chains.
+   */
   constructor() {
     super(AggId.SOCKET);
     this.routerByChainId = {
@@ -55,11 +59,26 @@ export class Socket extends BaseAggregator {
     this.approvalAddressByChainId = this.routerByChainId;
   }
 
+  /**
+   * Generates the required headers for Socket API requests.
+   * Includes API key if provided.
+   * @returns Record<string, string> - Headers object.
+   */
   private getHeaders = (): Record<string, string> => ({
     "Content-Type": "application/json",
     ...(this.apiKey && { "API-KEY": this.apiKey }),
   });
 
+  /**
+   * Helper function to make requests to the Socket API.
+   * Handles GET and POST requests with query/body formatting.
+   * @param endpoint - The API endpoint path (e.g., "quote").
+   * @param params - Query parameters for GET requests.
+   * @param method - HTTP method (GET or POST).
+   * @param body - Request body for POST requests.
+   * @returns Promise<T> - Parsed JSON response.
+   * @template T - Expected response type.
+   */
   private apiRequest = async <T = any>(
     endpoint: string,
     params?: Record<string, any>,
@@ -79,6 +98,12 @@ export class Socket extends BaseAggregator {
     });
   };
 
+  /**
+   * Processes the Socket route data to extract cost estimates.
+   * Sums up gas and fee costs from user transactions.
+   * @param route - The route object from the Socket quote response.
+   * @returns ICostEstimate - Standardized cost estimate object.
+   */
   private processCostEstimate = (route: ISocketRoute): ICostEstimate => {
     const costs = emptyCostEstimate();
     costs.feeCostWei = BigInt(route.integratorFee.amount);
@@ -97,6 +122,11 @@ export class Socket extends BaseAggregator {
     return costs;
   };
 
+  /**
+   * Converts BTR Swap parameters to the format expected by the Socket quote API.
+   * @param p - BTR Swap parameters.
+   * @returns Record<string, string | number | boolean | undefined> - Socket API compatible quote parameters.
+   */
   protected convertParams = (
     p: IBtrSwapParams,
   ): Record<string, string | number | boolean | undefined> => {
@@ -121,6 +151,11 @@ export class Socket extends BaseAggregator {
     return result;
   };
 
+  /**
+   * Parses Socket token data into the standardized IToken format.
+   * @param token - Token data from Socket API.
+   * @returns IToken - Standardized token information.
+   */
   private parseSocketToken = (token: ISocketToken): IToken => ({
     chainId: Number(token.chainId),
     address: token.address,
@@ -131,6 +166,12 @@ export class Socket extends BaseAggregator {
     priceUsd: token.chainAgnosticId?.toString(),
   });
 
+  /**
+   * Parses Socket user transaction steps into the standardized ISwapStep format.
+   * Determines step type and extracts relevant details.
+   * @param route - The route object containing user transactions.
+   * @returns ISwapStep[] - Array of standardized swap steps.
+   */
   private parseSteps = (route: ISocketRoute): ISwapStep[] => {
     if (!route.userTxs?.length) return [];
 
@@ -185,6 +226,11 @@ export class Socket extends BaseAggregator {
     });
   };
 
+  /**
+   * Fetches a quote from the Socket API.
+   * @param p - BTR Swap parameters.
+   * @returns Promise<ISocketQuote | undefined> - The Socket quote response or undefined on error.
+   */
   public async getQuote(p: IBtrSwapParams): Promise<ISocketQuote | undefined> {
     p = this.overloadParams(p);
     try {
@@ -202,6 +248,12 @@ export class Socket extends BaseAggregator {
     }
   }
 
+  /**
+   * Fetches transaction request data from Socket to perform a swap.
+   * Involves fetching a quote and then building the transaction data.
+   * @param p - BTR Swap parameters.
+   * @returns Promise<ITransactionRequestWithEstimate | undefined> - Formatted transaction request or undefined on error.
+   */
   public async getTransactionRequest(
     p: IBtrSwapParams,
   ): Promise<ITransactionRequestWithEstimate | undefined> {
@@ -248,6 +300,12 @@ export class Socket extends BaseAggregator {
     }
   }
 
+  /**
+   * Parses the raw status response from Socket API into the standardized IStatusResponse format.
+   * Maps Socket status strings to OpStatus enum.
+   * @param status - Raw status response data from Socket API.
+   * @returns IStatusResponse - Standardized status response.
+   */
   private parseTransactionStatus = (status: ISocketStatusData): IStatusResponse => ({
     id: status.sourceTx || status.destinationTransactionHash || "",
     status:
@@ -264,6 +322,11 @@ export class Socket extends BaseAggregator {
     substatusMessage: "",
   });
 
+  /**
+   * Fetches the status of a transaction from the Socket API.
+   * @param p - Status parameters including transaction hash and source/destination chain IDs.
+   * @returns Promise<IStatusResponse | undefined> - Standardized status response or undefined on error.
+   */
   public async getStatus(p: IStatusParams): Promise<IStatusResponse | undefined> {
     try {
       if (!p.txHash || p.inputChainId === undefined || p.outputChainId === undefined) {

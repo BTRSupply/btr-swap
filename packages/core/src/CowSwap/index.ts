@@ -33,6 +33,10 @@ export class CowSwap extends JITAggregator {
 
   public quoteOnly = true; // CowSwap needs an extra signature step
 
+  /**
+   * Initializes the CowSwap aggregator.
+   * Sets up chain aliases and vault relayer addresses for supported chains.
+   */
   constructor() {
     super(AggId.COWSWAP);
     this.routerByChainId = {
@@ -59,12 +63,14 @@ export class CowSwap extends JITAggregator {
   }
 
   /**
-   * Helper to call the CowSwap API endpoints.
-   * @param endpoint - API endpoint to call (e.g., "orders")
-   * @param method - HTTP method
-   * @param body - Optional request body
-   * @param chainId - Chain ID (default: 1)
-   * @returns API response
+   * Helper function to make requests to the CowSwap API.
+   * @param endpoint - API endpoint path (e.g., "quote").
+   * @param method - HTTP method (GET or POST).
+   * @param body - Request body for POST requests.
+   * @param chainId - The chain ID for the request.
+   * @returns Promise<T> - Parsed JSON response.
+   * @template T - Expected response type.
+   * @throws {Error} If the chain is unsupported or the request fails.
    */
   private async callApi<T = any>(
     endpoint: string,
@@ -98,6 +104,11 @@ export class CowSwap extends JITAggregator {
     }
   }
 
+  /**
+   * Converts BTR Swap parameters to the format expected by the CowSwap quote API.
+   * @param p - BTR Swap parameters.
+   * @returns Record<string, any> - CowSwap API compatible quote parameters.
+   */
   protected convertParams = (p: IBtrSwapParams): Record<string, any> => {
     const {
       input, // IToken
@@ -127,6 +138,15 @@ export class CowSwap extends JITAggregator {
     return baseQuote;
   };
 
+  /**
+   * Parses CowSwap token details into the standardized IToken format.
+   * Uses placeholders for missing data like symbol or logo.
+   * @param chainId - Chain ID of the token.
+   * @param tokenAddress - Address of the token.
+   * @param symbol - Optional token symbol.
+   * @param decimals - Optional token decimals.
+   * @returns IToken - Standardized token information.
+   */
   private parseToken = (
     chainId: number,
     tokenAddress: string,
@@ -141,6 +161,13 @@ export class CowSwap extends JITAggregator {
     logo: "", // Placeholder logo
   });
 
+  /**
+   * Parses CowSwap quote data into the standardized ISwapStep format.
+   * CowSwap orders are treated as a single off-chain swap step.
+   * @param p - Original BTR Swap parameters.
+   * @param quote - Quote data from CowSwap API.
+   * @returns ISwapStep[] - Array containing a single swap step representing the order.
+   */
   private parseSteps = (p: IBtrSwapParams, quote: ICowSwapQuote): ISwapStep[] => {
     // CowSwap is effectively a single step off-chain order
     return [
@@ -172,6 +199,15 @@ export class CowSwap extends JITAggregator {
     ];
   };
 
+  /**
+   * Processes the CowSwap quote and parameters to create a transaction request structure.
+   * Note: This doesn't contain actual on-chain transaction data, as CowSwap uses signatures.
+   * The relevant quote data for signing is typically added to `customData` later.
+   * @param quoteData - Quote data from CowSwap API.
+   * @param params - Original BTR Swap parameters.
+   * @param steps - Parsed swap steps.
+   * @returns ITransactionRequestWithEstimate - Formatted transaction request structure with estimates.
+   */
   private processTransactionRequest = (
     quoteData: ICowSwapQuote,
     params: IBtrSwapParams,
@@ -190,6 +226,11 @@ export class CowSwap extends JITAggregator {
     });
   };
 
+  /**
+   * Fetches a quote from the CowSwap API.
+   * @param p - BTR Swap parameters.
+   * @returns Promise<ICowSwapQuoteResponse | undefined> - The CowSwap quote response or undefined on error.
+   */
   public async getQuote(p: IBtrSwapParams): Promise<ICowSwapQuoteResponse | undefined> {
     p = this.overloadParams(p);
     try {
@@ -246,7 +287,12 @@ export class CowSwap extends JITAggregator {
     }
   }
 
-  // getStatus remains unchanged for now
+  /**
+   * Fetches the status of a CowSwap order.
+   * (Currently not implemented)
+   * @param _p - Status parameters (unused).
+   * @returns Promise<IStatusResponse | undefined> - Always returns undefined.
+   */
   public async getStatus(_p: IStatusParams): Promise<IStatusResponse | undefined> {
     // ... implementation ...
     return undefined; // Placeholder

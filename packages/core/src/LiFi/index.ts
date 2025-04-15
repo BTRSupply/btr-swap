@@ -34,6 +34,10 @@ import {
  * @see https://docs.li.fi/li.fi-api/li.fi-api
  */
 export class LiFi extends BaseAggregator {
+  /**
+   * Initializes the LiFi aggregator.
+   * Sets up router addresses and aliases for supported chains.
+   */
   constructor() {
     super(AggId.LIFI);
     // Set up router addresses for supported chains
@@ -55,7 +59,10 @@ export class LiFi extends BaseAggregator {
   }
 
   /**
-   * Calculates a gas estimate from costs arrays
+   * Processes LiFi cost arrays (gas, fee) into a standardized ICostEstimate.
+   * @param gasCosts - Array of gas cost objects from LiFi API.
+   * @param feeCosts - Array of fee cost objects from LiFi API.
+   * @returns ICostEstimate - Standardized cost estimate object.
    */
   private processCostEstimate = (gasCosts: any[], feeCosts: any[]): ICostEstimate => ({
     gasCostUsd: this.sumCosts(gasCosts, "amountUSD") as number,
@@ -65,8 +72,11 @@ export class LiFi extends BaseAggregator {
   });
 
   /**
-   * Helper to sum cost arrays from LiFi responses.
+   * Internal helper to sum cost arrays (gas or fee) from LiFi API responses.
    * Handles both string amounts (for Wei) and USD amounts (for float).
+   * @param costs - Array of cost objects.
+   * @param key - The key to sum ('amount' for Wei, 'amountUSD' for USD).
+   * @returns bigint | number - The total summed cost as BigInt (Wei) or number (USD).
    */
   private sumCosts(
     costs: { amount?: string; amountUSD?: string }[] | undefined,
@@ -82,11 +92,21 @@ export class LiFi extends BaseAggregator {
     }
   }
 
+  /**
+   * Generates the required headers for LiFi API requests.
+   * Includes API key if provided.
+   * @returns Record<string, string> - Headers object.
+   */
   private getHeaders = (): Record<string, string> => ({
     "Content-Type": "application/json",
     ...(this.apiKey && { "X-API-Key": this.apiKey }),
   });
 
+  /**
+   * Converts BTR Swap parameters to the format expected by LiFi API endpoints.
+   * @param p - BTR Swap parameters.
+   * @returns Record<string, any> - LiFi API compatible parameters.
+   */
   protected convertParams = (p: IBtrSwapParams): Record<string, any> => {
     return {
       fromChain: p.input.chainId.toString(),
@@ -105,6 +125,16 @@ export class LiFi extends BaseAggregator {
     };
   };
 
+  /**
+   * Helper function to make requests to the LiFi API.
+   * Handles GET and POST requests with query/body formatting.
+   * @param endpoint - The API endpoint path (e.g., "quote").
+   * @param params - Query parameters for GET requests.
+   * @param method - HTTP method (GET or POST).
+   * @param body - Request body for POST requests.
+   * @returns Promise<T> - Parsed JSON response.
+   * @template T - Expected response type.
+   */
   private apiRequest = async <T = any>(
     endpoint: string,
     params?: Record<string, any>,
@@ -128,6 +158,11 @@ export class LiFi extends BaseAggregator {
     });
   };
 
+  /**
+   * Parses LiFi token data into the standardized IToken format.
+   * @param token - Token data from LiFi API.
+   * @returns IToken - Standardized token information.
+   */
   private parseToken = (token: ILifiToken): IToken => ({
     address: token.address ?? "",
     decimals: token.decimals,
@@ -138,6 +173,12 @@ export class LiFi extends BaseAggregator {
     priceUsd: token.priceUSD,
   });
 
+  /**
+   * Parses LiFi step data into the standardized ISwapStep format.
+   * Calculates estimates for each step.
+   * @param steps - Array of step objects from LiFi API response.
+   * @returns ISwapStep[] - Array of standardized swap steps.
+   */
   private parseSteps = (steps: ILifiSwapStep[]): ISwapStep[] =>
     steps.map((step) => {
       const inputAmount = Number(step.estimate.fromAmount) / 10 ** step.action.fromToken.decimals;
@@ -178,6 +219,15 @@ export class LiFi extends BaseAggregator {
       };
     });
 
+  /**
+   * Processes a LiFi transaction request and step data into a standardized format.
+   * Attaches parameters and calculated steps/estimates.
+   * @param tx - Raw transaction request data from LiFi API.
+   * @param step - The primary LiFi step this transaction corresponds to.
+   * @param includedSteps - All LiFi steps included in this transaction (usually just one).
+   * @returns ITransactionRequestWithEstimate - Formatted transaction request with estimates.
+   * @throws {Error} If transaction data or steps are incomplete/invalid.
+   */
   private processTransactionRequest = (
     tx: TransactionRequest,
     step: ILifiSwapStep,
@@ -211,6 +261,12 @@ export class LiFi extends BaseAggregator {
     });
   };
 
+  /**
+   * Parses the raw status response from LiFi API into the standardized IStatusResponse format.
+   * Maps LiFi status strings to OpStatus enum.
+   * @param status - Raw status response from LiFi API.
+   * @returns IStatusResponse - Standardized status response.
+   */
   private parseTransactionStatus = (status: ILifiTransactionStatus): IStatusResponse => ({
     id: status.transactionId || "",
     status:
@@ -227,6 +283,11 @@ export class LiFi extends BaseAggregator {
     receivingTx: status.receiving?.txHash,
   });
 
+  /**
+   * Fetches the best quote from the LiFi API.
+   * @param p - BTR Swap parameters.
+   * @returns Promise<ILifiBestQuote | undefined> - The best LiFi quote or undefined on error.
+   */
   public async getQuote(p: IBtrSwapParams): Promise<ILifiBestQuote | undefined> {
     p = this.overloadParams(p);
     try {
@@ -242,6 +303,11 @@ export class LiFi extends BaseAggregator {
     }
   }
 
+  /**
+   * Fetches transaction request data from LiFi to perform a swap.
+   * @param p - BTR Swap parameters.
+   * @returns Promise<ITransactionRequestWithEstimate | undefined> - Formatted transaction request or undefined on error.
+   */
   public async getTransactionRequest(
     p: IBtrSwapParams,
   ): Promise<ITransactionRequestWithEstimate | undefined> {
@@ -263,6 +329,11 @@ export class LiFi extends BaseAggregator {
     }
   }
 
+  /**
+   * Fetches the status of a LiFi transaction.
+   * @param p - Status parameters including transaction ID and chain details.
+   * @returns Promise<IStatusResponse | undefined> - Standardized status response or undefined on error.
+   */
   public async getStatus(p: IStatusParams): Promise<IStatusResponse | undefined> {
     try {
       if (!p.txHash) {
@@ -307,6 +378,11 @@ export class LiFi extends BaseAggregator {
     }
   }
 
+  /**
+   * Fetches gas suggestions for a specific chain from LiFi API.
+   * @param p - Gas suggestion parameters including chain ID.
+   * @returns Promise<unknown> - The raw gas suggestion response from LiFi.
+   */
   public async gasSuggestion(p: ILifiGasSuggestionParams): Promise<unknown> {
     try {
       if (!p.chainId) {

@@ -32,6 +32,10 @@ import {
  * @see https://docs.unizen.io/api-get-started/single-chain-swap
  */
 export class Unizen extends BaseAggregator {
+  /**
+   * Initializes the Unizen aggregator.
+   * Sets up router addresses and aliases for supported chains.
+   */
   constructor() {
     super(AggId.UNIZEN);
     this.routerByChainId = {
@@ -51,14 +55,37 @@ export class Unizen extends BaseAggregator {
     this.approvalAddressByChainId = this.routerByChainId;
   }
 
+  /**
+   * Generates the required headers for Unizen API requests.
+   * Includes API key if provided.
+   * @returns Record<string, string> - Headers object.
+   */
   private getHeaders = (): Record<string, string> =>
     this.apiKey ? { "x-api-key": this.apiKey } : {};
 
+  /**
+   * Gets the base API URL for a given chain ID.
+   * @param chainId - The chain ID.
+   * @returns string - The API root URL for the chain.
+   * @throws {Error} If the chain ID is not supported.
+   */
   protected getApiRoot(chainId: number): string {
     this.ensureChainSupported(chainId);
     return `${this.baseApiUrl}/${this.aliasByChainId[chainId]}`;
   }
 
+  /**
+   * Helper function to make requests to the Unizen API.
+   * Handles GET and POST requests with proper headers and query/body formatting.
+   * @param endpoint - The API endpoint path (e.g., "quote/single").
+   * @param params - Query parameters.
+   * @param method - HTTP method (GET or POST).
+   * @param body - Request body for POST requests.
+   * @param chainId - The chain ID for the request.
+   * @returns Promise<T> - Parsed JSON response.
+   * @template T - Expected response type.
+   * @throws {Error} If chainId is missing.
+   */
   private apiRequest = async <T = any>(
     endpoint: string,
     params: Record<string, any>, // Make params required for clarity
@@ -96,12 +123,22 @@ export class Unizen extends BaseAggregator {
     });
   };
 
+  /**
+   * Type guard to check if a quote response is for a cross-chain swap.
+   * @param quote - The quote response object.
+   * @returns boolean - True if it's a cross-chain quote, false otherwise.
+   */
   private isCrossChainQuote = (
     quote: IUnizenQuoteResult | IUnizenCrossQuoteResult,
   ): quote is IUnizenCrossQuoteResult => {
     return "srcTrade" in quote;
   };
 
+  /**
+   * Extracts common quote information (tokens, amounts) from either single or cross-chain quote response.
+   * @param quote - The quote response object.
+   * @returns Object containing input/output token and amount details.
+   */
   private extractQuoteInfo = (quote: IUnizenQuoteResult | IUnizenCrossQuoteResult) => {
     if (this.isCrossChainQuote(quote)) {
       return {
@@ -120,6 +157,11 @@ export class Unizen extends BaseAggregator {
     }
   };
 
+  /**
+   * Generates the `excludedDexes` parameter based on BTR Swap blacklists.
+   * @param p - BTR Swap parameters.
+   * @returns Record<string, string[]> | undefined - Excluded dexes object for Unizen API or undefined if no blacklist.
+   */
   private getExcludedDexesList = (p: IBtrSwapParams): Record<string, string[]> | undefined => {
     const denyList = p.exchangeBlacklist?.concat(p.bridgeBlacklist ?? []);
     if (!denyList?.length) return undefined;
@@ -133,6 +175,11 @@ export class Unizen extends BaseAggregator {
     return result;
   };
 
+  /**
+   * Converts BTR Swap parameters to the format expected by the Unizen quote API.
+   * @param p - BTR Swap parameters.
+   * @returns IUnizenQuoteParams - Unizen API compatible quote parameters.
+   */
   protected convertParams = (p: IBtrSwapParams): IUnizenQuoteParams => {
     const { input, output, inputAmountWei, payer, receiver, maxSlippage } = p;
     const excludedDexes = this.getExcludedDexesList(p);
@@ -153,9 +200,19 @@ export class Unizen extends BaseAggregator {
     };
   };
 
+  /**
+   * Checks if the BTR Swap parameters indicate a cross-chain swap.
+   * @param p - BTR Swap parameters.
+   * @returns boolean - True if it's a cross-chain swap, false otherwise.
+   */
   private isCrossChainSwap = (p: IBtrSwapParams): boolean =>
     !!p.output.chainId && p.input.chainId !== p.output.chainId;
 
+  /**
+   * Fetches a quote from the Unizen API (handles both single and cross-chain).
+   * @param p - BTR Swap parameters.
+   * @returns Promise<IUnizenQuoteResult | IUnizenCrossQuoteResult | undefined> - The best quote found or undefined on error.
+   */
   public async getQuote(
     p: IBtrSwapParams,
   ): Promise<IUnizenQuoteResult | IUnizenCrossQuoteResult | undefined> {
@@ -191,12 +248,27 @@ export class Unizen extends BaseAggregator {
     }
   }
 
+  /**
+   * Parses Unizen token data into the standardized IToken format.
+   * @param token - Token data from Unizen API.
+   * @returns IToken - Standardized token information.
+   */
   private parseUnizenToken = (token: IUnizenToken): IToken => ({
     ...token,
     address: token.contractAddress,
     logo: "", // Changed from logoURI to logo
   });
 
+  /**
+   * Builds a standardized ISwapStep object from Unizen quote data.
+   * Calculates estimates for single-chain swaps.
+   * @param type - The type of step (SWAP or BRIDGE).
+   * @param description - A description for the step.
+   * @param quote - The Unizen quote response.
+   * @param quoteInfo - Extracted quote information (tokens, amounts).
+   * @param payer - The payer address.
+   * @returns ISwapStep - Standardized swap step object.
+   */
   private buildStep = (
     type: StepType,
     description: string,
@@ -247,6 +319,12 @@ export class Unizen extends BaseAggregator {
     };
   };
 
+  /**
+   * Fetches transaction request data from Unizen to perform a swap.
+   * For cross-chain, it gets data for the source chain transaction.
+   * @param p - BTR Swap parameters.
+   * @returns Promise<ITransactionRequestWithEstimate | undefined> - Formatted transaction request or undefined on error.
+   */
   public async getTransactionRequest(
     p: IBtrSwapParams,
   ): Promise<ITransactionRequestWithEstimate | undefined> {
@@ -331,12 +409,24 @@ export class Unizen extends BaseAggregator {
     }
   }
 
+  /**
+   * Fetches the status of a Unizen transaction.
+   * (Currently not implemented - returns placeholder)
+   * @param _p - Status parameters (unused).
+   * @returns Promise<any | undefined> - Placeholder undefined return.
+   */
   public async getStatus(_p: IStatusParams): Promise<any | undefined> {
     console.warn("Unizen getStatus not implemented");
     return undefined;
   }
 
-  // Helper to get target address - unused currently but kept for potential future use
+  /**
+   * Helper to potentially fetch the correct target address based on version and chain.
+   * (Currently returns router address - needs API verification if dynamic targets exist).
+   * @param version - API version (unused).
+   * @param chainId - Chain ID.
+   * @returns Promise<string | undefined> - The target address or undefined.
+   */
   private async getTargetAddress(version: string, chainId: number): Promise<string | undefined> {
     try {
       const response = await this.apiRequest<{ address: string }>(

@@ -25,6 +25,10 @@ import {
  * @see https://docs.openocean.finance/api-sdk/api
  */
 export class OpenOcean extends BaseAggregator {
+  /**
+   * Initializes the OpenOcean aggregator.
+   * Sets up chain aliases. Router and approval addresses are dynamic.
+   */
   constructor() {
     super(AggId.OPENOCEAN);
     // Router/Approval addresses seem dynamic or fetched, keeping maps empty
@@ -46,13 +50,21 @@ export class OpenOcean extends BaseAggregator {
     this.approvalAddressByChainId = {};
   }
 
+  /**
+   * Gets the base API URL for a given chain ID for the OpenOcean API.
+   * @param chainId - The chain ID.
+   * @returns string - The API root URL for the chain.
+   * @throws {Error} If the chain ID is not supported.
+   */
   protected getApiRoot(chainId: number): string {
     this.ensureChainSupported(chainId);
     return `${this.baseApiUrl}/${this.aliasByChainId[chainId]}`;
   }
 
   /**
-   * Converts BTR Swap parameters to OpenOcean API query parameters.
+   * Converts BTR Swap parameters to the format expected by the OpenOcean swap API.
+   * @param p - BTR Swap parameters.
+   * @returns Record<string, any> - OpenOcean API compatible swap parameters.
    */
   protected convertParams(p: IBtrSwapParams): Record<string, any> {
     this.overloadParams(p);
@@ -73,8 +85,11 @@ export class OpenOcean extends BaseAggregator {
   }
 
   /**
-   * Provides a minimal implementation for the abstract getQuote method.
-   * OpenOcean's transaction logic primarily uses the swap endpoint.
+   * Minimal implementation for getQuote.
+   * OpenOcean combines quote and swap in the `swap` endpoint used by `getTransactionRequest`.
+   * This method returns undefined as a separate quote call is not typically needed.
+   * @param _p - BTR Swap parameters (unused).
+   * @returns Promise<undefined> - Always returns undefined.
    */
   public async getQuote(_p: IBtrSwapParams): Promise<any | undefined> {
     // This implementation doesn't need to fetch a quote as getTransactionRequest
@@ -85,7 +100,9 @@ export class OpenOcean extends BaseAggregator {
   }
 
   /**
-   * Fetches the current gas price for a chain (internal helper).
+   * Internal helper to fetch the current gas price for a chain from OpenOcean API.
+   * @param chainId - The chain ID.
+   * @returns Promise<string | undefined> - The gas price as a string or undefined if fetch fails.
    */
   private async getGasPrice(chainId: number): Promise<string | undefined> {
     try {
@@ -99,7 +116,10 @@ export class OpenOcean extends BaseAggregator {
   }
 
   /**
-   * Fetches a transaction request for an OpenOcean swap.
+   * Fetches transaction request data from OpenOcean to perform a swap.
+   * Calls the `/swap` endpoint which includes quote information.
+   * @param p - BTR Swap parameters.
+   * @returns Promise<ITransactionRequestWithEstimate | undefined> - Formatted transaction request or undefined on error.
    */
   public async getTransactionRequest(
     p: IBtrSwapParams,
@@ -127,8 +147,8 @@ export class OpenOcean extends BaseAggregator {
       }
 
       const swapData = swapResponse.data;
-      const approvalAddress = swapData.to ?? this.getApprovalAddress(chainId);
-      if (!approvalAddress) {
+      const approveTo = swapData.to ?? this.getApprovalAddress(chainId);
+      if (!approveTo) {
         throw new Error(`[OpenOcean] Could not determine approval address for chain ${chainId}`);
       }
       const inputAmount = Number(p.inputAmountWei) / 10 ** p.input.decimals;

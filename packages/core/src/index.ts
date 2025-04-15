@@ -52,8 +52,8 @@ export const aggregatorById: { [key: string]: BaseAggregator } = {
 };
 
 /**
- * Fetches the transaction request and extracts only the `data` (calldata) field.
- * Useful for scenarios where only the calldata is needed without executing the transaction.
+ * Fetches the best transaction request and extracts its calldata.
+ * Useful for scenarios where only the transaction calldata is needed.
  * @param o - BTR Swap parameters.
  * @returns A promise resolving to the transaction calldata string, or an empty string if no data is found.
  */
@@ -63,7 +63,9 @@ export async function getCallData(o: IBtrSwapParams): Promise<string> {
 }
 
 /**
- * Fetches transaction requests from multiple aggregators and sorts by best exchange rate.
+ * Fetches transaction requests concurrently from multiple specified aggregators.
+ * Sorts the successful results by the best estimated output amount (exchange rate).
+ * Includes a timeout mechanism for each aggregator request.
  * @param o - BTR Swap parameters.
  * @returns Array of successful transaction requests sorted by rate, or undefined if none succeed.
  * @throws {Error} If no viable routes are found.
@@ -125,8 +127,9 @@ export async function getAllTimedTr(
 }
 
 /**
- * Gets the single best transaction request from the available aggregators based on estimated exchange rate.
- * The result can be formatted for logging using trToString().
+ * Fetches the single best transaction request from the available aggregators.
+ * It determines the "best" request based on the highest estimated output amount after fetching from all specified aggregators.
+ * Uses `getAllTimedTr` internally.
  * @param o - BTR Swap parameters.
  * @returns A promise resolving to the best transaction request, or undefined if none found.
  */

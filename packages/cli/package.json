@@ -34,6 +34,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@types/bun": "^1.2.9",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.5.4"
   },

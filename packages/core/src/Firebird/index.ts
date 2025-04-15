@@ -25,6 +25,10 @@ import {
  * @see https://docs.firebird.finance/developer/api-specification
  */
 export class Firebird extends BaseAggregator {
+  /**
+   * Initializes the Firebird aggregator.
+   * Sets up router addresses and aliases for supported chains.
+   */
   constructor() {
     super(AggId.FIREBIRD);
     this.routerByChainId = {
@@ -43,7 +47,9 @@ export class Firebird extends BaseAggregator {
   }
 
   /**
-   * Converts standard IBtrSwapParams to Firebird's API params.
+   * Converts BTR Swap parameters to the format expected by the Firebird API.
+   * @param p - BTR Swap parameters.
+   * @returns Record<string, any> - Firebird API compatible parameters.
    * @throws {Error} If parameters are invalid
    */
   protected convertParams(p: IBtrSwapParams): Record<string, any> {
@@ -61,6 +67,16 @@ export class Firebird extends BaseAggregator {
     };
   }
 
+  /**
+   * Helper function to make requests to the Firebird API.
+   * Handles GET and POST requests with proper headers and query/body formatting.
+   * @param url - The API endpoint URL.
+   * @param params - Query parameters for GET requests.
+   * @param method - HTTP method (GET or POST).
+   * @param body - Request body for POST requests.
+   * @returns Promise<T> - Parsed JSON response.
+   * @template T - Expected response type.
+   */
   private apiRequest = async <T = any>(
     url: string | URL,
     params?: Record<string, any>,
@@ -86,7 +102,8 @@ export class Firebird extends BaseAggregator {
   };
 
   /**
-   * Fetches a quote from the Firebird API.
+   * Fetches a quote from the Firebird /quote endpoint.
+   * @param p - BTR Swap parameters.
    * @returns A promise resolving to the Firebird quote response.
    */
   public async getQuote(p: IBtrSwapParams): Promise<IFirebirdQuoteResponse | undefined> {
@@ -110,7 +127,10 @@ export class Firebird extends BaseAggregator {
   }
 
   /**
-   * Gets a transaction request for the Firebird swap.
+   * Fetches transaction request data from Firebird to perform a swap.
+   * Involves fetching a quote and then encoding the transaction data.
+   * @param p - BTR Swap parameters.
+   * @returns Promise<ITransactionRequestWithEstimate | undefined> - Formatted transaction request or undefined on error.
    */
   public async getTransactionRequest(
     p: IBtrSwapParams,
@@ -138,7 +158,7 @@ export class Firebird extends BaseAggregator {
       const { encodedData } = encodeResponse;
 
       const tx: Partial<TransactionRequest> = {
-        approvalAddress: encodedData.router,
+        approveTo: encodedData.router,
         from: p.payer,
         to: encodedData.router,
         data: encodedData.data,
@@ -153,11 +173,26 @@ export class Firebird extends BaseAggregator {
     }
   }
 
+  /**
+   * Gets the base API URL for a given chain ID for the Firebird API.
+   * @param chainId - The chain ID.
+   * @returns string - The API root URL for the chain.
+   * @throws {Error} If the chain ID is not supported.
+   */
   protected getApiRoot(chainId: number): string {
     if (!this.aliasByChainId[chainId]) throw new Error(`Unsupported chain: ${chainId}`);
     return `${this.baseApiUrl}/${this.aliasByChainId[chainId]}`;
   }
 
+  /**
+   * Processes the Firebird quote and encoded data to create a transaction request structure.
+   * Calculates estimates based on the quote and formats the swap step.
+   * @param tx - Partial transaction request data from the encode endpoint.
+   * @param params - Original BTR Swap parameters.
+   * @param quote - Quote response from the Firebird API.
+   * @param _encodedData - Encoded data response (currently unused in estimate calculation).
+   * @returns ITransactionRequestWithEstimate - Formatted transaction request with estimates.
+   */
   private processTransactionRequest = (
     tx: Partial<TransactionRequest>,
     params: IBtrSwapParams,

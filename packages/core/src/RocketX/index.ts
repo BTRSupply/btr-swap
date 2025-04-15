@@ -20,6 +20,10 @@ import { addEstimatesToTr, emptyEstimate, fetchJson, formatError } from "@/utils
  * @see https://docs.rocketx.exchange/
  */
 export class RocketX extends UnimplementedAggregator {
+  /**
+   * Initializes the RocketX aggregator.
+   * Sets up router addresses (example provided, confirm actual addresses).
+   */
   constructor() {
     super(AggId.ROCKETX);
     this.routerByChainId = {
@@ -30,6 +34,11 @@ export class RocketX extends UnimplementedAggregator {
     this.approvalAddressByChainId = this.routerByChainId;
   }
 
+  /**
+   * Generates the required headers for RocketX API requests.
+   * Includes API key if provided.
+   * @returns Record<string, string> - Headers object.
+   */
   private getHeaders = (): Record<string, string> => ({
     "Content-Type": "application/json",
     // Add API key header if needed

@@ -24,6 +24,10 @@ import {
  * @see https://docs.0x.org/0x-api-swap/api-references/get-swap-v1-quote
  */
 export class ZeroX extends BaseAggregator {
+  /**
+   * Initializes the 0x aggregator.
+   * Sets up chain aliases. Router and approval addresses are dynamic.
+   */
   constructor() {
     super(AggId.ZERO_X);
     // Router address is dynamic based on chain, typically returned by API
@@ -42,16 +46,29 @@ export class ZeroX extends BaseAggregator {
     this.approvalAddressByChainId = {};
   }
 
+  /**
+   * Gets the base API URL for a given chain ID for the 0x V1 API.
+   * @param chainId - The chain ID.
+   * @returns string - The API root URL for the chain.
+   * @throws {Error} If the chain ID is not supported.
+   */
   protected getApiRoot(chainId: number): string {
     this.ensureChainSupported(chainId);
     return `https://${chainId === 1 ? "" : this.aliasByChainId[chainId] + "."}api.0x.org/swap/v1`;
   }
 
+  /**
+   * Generates the required headers for 0x API requests.
+   * Includes API key if provided.
+   * @returns Record<string, string> - Headers object.
+   */
   private getHeaders = (): Record<string, string> =>
     this.apiKey ? { "0x-api-key": this.apiKey } : {};
 
   /**
-   * Converts BTR Swap parameters to 0x API query parameters.
+   * Converts BTR Swap parameters to the format expected by the 0x quote API.
+   * @param params - BTR Swap parameters.
+   * @returns Record<string, string | number | undefined> - 0x API compatible quote parameters.
    */
   protected convertParams(params: IBtrSwapParams): Record<string, string | number | undefined> {
     const { input, output, inputAmountWei, payer, receiver, maxSlippage } = params;
@@ -70,7 +87,7 @@ export class ZeroX extends BaseAggregator {
   }
 
   /**
-   * Fetches a quote from the 0x API v2.
+   * Fetches a quote from the 0x API v1.
    * @param p - BTR Swap parameters.
    * @returns A promise resolving to the quote response, or undefined if an error occurs.
    */
@@ -98,7 +115,9 @@ export class ZeroX extends BaseAggregator {
   }
 
   /**
-   * Extracts cost estimates from a 0x quote
+   * Processes the 0x quote response to extract cost estimates.
+   * @param quote - The quote response from the 0x API.
+   * @returns ICostEstimate - Standardized cost estimate object.
    */
   private processCostEstimate = (quote: I0xQuoteResponse): ICostEstimate => {
     const costs = emptyCostEstimate();
@@ -123,7 +142,10 @@ export class ZeroX extends BaseAggregator {
   };
 
   /**
-   * Fetches a transaction request from the 0x API v2
+   * Fetches a transaction request from the 0x API v1.
+   * Validates the quote and formats the transaction details.
+   * @param p - BTR Swap parameters.
+   * @returns Promise<ITransactionRequestWithEstimate | undefined> - Formatted transaction request or undefined on error.
    */
   public async getTransactionRequest(
     p: IBtrSwapParams,
@@ -146,8 +168,8 @@ export class ZeroX extends BaseAggregator {
         throw new Error("[ZeroX] Invalid quote response structure");
       }
       const chainId = Number(p.input.chainId);
-      const approvalAddress = quote.issues?.allowance?.spender || this.getApprovalAddress(chainId);
-      if (!approvalAddress) {
+      const approveTo = quote.issues?.allowance?.spender || this.getApprovalAddress(chainId);
+      if (!approveTo) {
         throw new Error("[ZeroX] No approval address available");
       }
 

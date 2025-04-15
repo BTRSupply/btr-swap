@@ -26,6 +26,10 @@ import {
  * @see https://docs.kyberswap.com/Aggregator/aggregator-api-specification
  */
 export class KyberSwap extends BaseAggregator {
+  /**
+   * Initializes the KyberSwap aggregator.
+   * Sets up router addresses and aliases for supported chains.
+   */
   constructor() {
     super(AggId.KYBERSWAP);
     this.routerByChainId = {
@@ -41,10 +45,25 @@ export class KyberSwap extends BaseAggregator {
     this.approvalAddressByChainId = this.routerByChainId;
   }
 
+  /**
+   * Generates the required headers for KyberSwap API requests.
+   * Includes the client ID (integrator name or default).
+   * @returns Record<string, string> - Headers object.
+   */
   protected getHeaders = (): Record<string, string> => ({
     "x-client-id": this.integrator || "btr-swap-sdk",
   });
 
+  /**
+   * Helper function to make requests to the KyberSwap API.
+   * Handles GET and POST requests with proper headers and query/body formatting.
+   * @param url - The API endpoint URL.
+   * @param params - Query parameters for GET requests.
+   * @param method - HTTP method (GET or POST).
+   * @param body - Request body for POST requests.
+   * @returns Promise<T> - Parsed JSON response.
+   * @template T - Expected response type.
+   */
   private apiRequest = async <T = any>(
     url: string | URL,
     params?: Record<string, any>,
@@ -67,11 +86,23 @@ export class KyberSwap extends BaseAggregator {
     return fetchJson<T>(finalUrl, fetchOptions);
   };
 
+  /**
+   * Gets the base API URL for a given chain ID.
+   * @param chainId - The chain ID.
+   * @returns string - The API root URL for the chain.
+   * @throws {Error} If the chain ID is not supported.
+   */
   protected getApiRoot(chainId: number): string {
     this.ensureChainSupported(chainId);
     return `${this.baseApiUrl}/v1/${this.aliasByChainId[chainId]}`;
   }
 
+  /**
+   * Converts BTR Swap parameters to the format expected by KyberSwap API.
+   * Handles native token addressing and slippage format.
+   * @param p - BTR Swap parameters.
+   * @returns Record<string, any> - KyberSwap API compatible parameters.
+   */
   protected convertParams = (p: IBtrSwapParams): Record<string, any> => {
     const isNativeSell = p.input.address === zeroAddress;
     const isNativeBuy = p.output.address === zeroAddress;
@@ -87,6 +118,14 @@ export class KyberSwap extends BaseAggregator {
     };
   };
 
+  /**
+   * Processes the raw transaction request data from KyberSwap and formats it.
+   * Calculates estimates and structures swap steps.
+   * @param tx - Partial transaction request data.
+   * @param params - Original BTR Swap parameters.
+   * @param routeSummary - Summary data from the KyberSwap API response.
+   * @returns ITransactionRequestWithEstimate - Formatted transaction request with estimates.
+   */
   private processTransactionRequest = (
     tx: Partial<TransactionRequest>,
     params: IBtrSwapParams,
@@ -130,11 +169,23 @@ export class KyberSwap extends BaseAggregator {
     });
   };
 
+  /**
+   * KyberSwap does not have a separate quote endpoint.
+   * This method warns and returns undefined.
+   * Use `getTransactionRequest` instead.
+   * @param _p - BTR Swap parameters (unused).
+   * @returns Promise<undefined> - Always returns undefined.
+   */
   public async getQuote(_p: IBtrSwapParams): Promise<any | undefined> {
     console.warn("[KyberSwap] getQuote not implemented, use getTransactionRequest.");
     return undefined;
   }
 
+  /**
+   * Fetches transaction request data from KyberSwap to perform a swap.
+   * @param p - BTR Swap parameters.
+   * @returns Promise<ITransactionRequestWithEstimate | undefined> - The formatted transaction request or undefined if an error occurs.
+   */
   public async getTransactionRequest(
     p: IBtrSwapParams,
   ): Promise<ITransactionRequestWithEstimate | undefined> {
@@ -179,7 +230,7 @@ export class KyberSwap extends BaseAggregator {
       }
 
       const tx: Partial<TransactionRequest> = {
-        approvalAddress: routerAddress,
+        approveTo: routerAddress,
         from: p.payer,
         to: routerAddress,
         data: encodedSwapData,

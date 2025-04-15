@@ -8,6 +8,10 @@ import { mapKToKV } from "@/utils";
  * @see https://docs.hashflow.com/hashflow/taker/getting-started-api-v3
  */
 export class Hashflow extends JITAggregator {
+  /**
+   * Initializes the Hashflow aggregator.
+   * Sets up router addresses and aliases for supported chains.
+   */
   constructor() {
     super(AggId.HASHFLOW);
     this.routerByChainId = {

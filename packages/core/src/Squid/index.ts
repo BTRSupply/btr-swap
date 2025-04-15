@@ -37,6 +37,10 @@ import {
  * @see https://docs.squidrouter.com/api-and-sdk-integration/api
  */
 export class Squid extends BaseAggregator {
+  /**
+   * Initializes the Squid aggregator.
+   * Sets up router addresses and aliases for supported chains.
+   */
   constructor() {
     super(AggId.SQUID);
     this.routerByChainId = {
@@ -60,6 +64,12 @@ export class Squid extends BaseAggregator {
     this.approvalAddressByChainId = this.routerByChainId;
   }
 
+  /**
+   * Generates the required headers for Squid API requests.
+   * Includes integrator ID and optionally the Accept header.
+   * @param includeAccept - Whether to include the Accept: application/json header.
+   * @returns Record<string, string> - Headers object.
+   */
   private getHeaders = (includeAccept = false): Record<string, string> => ({
     "Content-Type": "application/json",
     "x-integrator-id": this.integrator,
@@ -67,6 +77,16 @@ export class Squid extends BaseAggregator {
     // ...(this.apiKey && { "api-key": this.apiKey }),
   });
 
+  /**
+   * Helper function to make requests to the Squid API.
+   * Handles GET and POST requests with proper headers and query/body formatting.
+   * @param endpoint - The API endpoint path (e.g., "route").
+   * @param method - HTTP method (GET or POST).
+   * @param params - Query parameters for GET requests.
+   * @param body - Request body for POST requests.
+   * @returns Promise<T> - Parsed JSON response.
+   * @template T - Expected response type.
+   */
   private apiRequest = async <T = any>(
     endpoint: string,
     method: "GET" | "POST" = "GET",
@@ -86,6 +106,13 @@ export class Squid extends BaseAggregator {
     });
   };
 
+  /**
+   * Generates a postHook custom call structure for Squid API.
+   * Used for including custom contract interactions after the swap.
+   * @param call - Custom contract call details.
+   * @param outputToken - Address of the token expected after the swap.
+   * @returns ISquidCustomCall - Formatted custom call object for Squid API.
+   */
   private generateHook = (call: ICustomContractCall, outputToken: string): ISquidCustomCall => ({
     chainType: ChainType.EVM,
     callType: SquidCallType.FULL_TOKEN_BALANCE,
@@ -96,6 +123,11 @@ export class Squid extends BaseAggregator {
     estimatedGas: call.gasLimit ?? "20000",
   });
 
+  /**
+   * Converts BTR Swap parameters to the format expected by Squid API quote endpoint.
+   * @param p - BTR Swap parameters.
+   * @returns IQuoteParams - Squid API compatible quote parameters.
+   */
   protected convertParams = (p: IBtrSwapParams): IQuoteParams => ({
     enableBoost: true,
     fromToken: p.input.address!,
@@ -118,6 +150,11 @@ export class Squid extends BaseAggregator {
       : undefined,
   });
 
+  /**
+   * Parses Squid token data into the standardized IToken format.
+   * @param token - Token data from Squid API.
+   * @returns IToken - Standardized token information.
+   */
   private parseToken = (token?: ISquidToken): IToken => ({
     address: token?.address ?? "",
     decimals: token?.decimals ?? 0,
@@ -128,6 +165,11 @@ export class Squid extends BaseAggregator {
     priceUsd: token?.usdPrice?.toString() ?? "0",
   });
 
+  /**
+   * Parses Squid swap/bridge actions into the standardized ISwapStep format.
+   * @param steps - Array of actions from Squid API route estimate.
+   * @returns ISwapStep[] - Array of standardized swap steps.
+   */
   private parseSteps = (steps?: ISquidAction[]): ISwapStep[] => {
     if (!steps?.length) return [];
 
@@ -170,6 +212,12 @@ export class Squid extends BaseAggregator {
     });
   };
 
+  /**
+   * Calculates the total gas and fee costs from the Squid route estimate.
+   * Sums up costs from different tokens/sources.
+   * @param estimate - Estimate object from Squid API quote response.
+   * @returns Object containing total gas and fee costs in USD and Wei.
+   */
   private calculateCosts = (estimate: ISquidQuoteResponse["route"]["estimate"]) => {
     const gasCostUsd = estimate.gasCosts.reduce(
       (sum, c) => sum + parseFloat(c.amountUsd || "0"),
@@ -194,6 +242,12 @@ export class Squid extends BaseAggregator {
     return { gasCostUsd, gasCostWei, feeCostUsd, feeCostWei };
   };
 
+  /**
+   * Validates the output amount from a Squid quote response.
+   * Ensures the final output amount is positive and valid.
+   * @param quote - Squid API quote response.
+   * @returns boolean - True if the output is valid, false otherwise.
+   */
   private isValidOutput = (quote: ISquidQuoteResponse): boolean => {
     if (!quote.route?.estimate?.toAmount) return false;
 
@@ -206,6 +260,11 @@ export class Squid extends BaseAggregator {
     return !!lastAction.toAmount && BigInt(lastAction.toAmount) > 0n;
   };
 
+  /**
+   * Fetches a quote from the Squid API.
+   * @param p - BTR Swap parameters.
+   * @returns Promise<ISquidQuoteResponse | undefined> - The Squid quote response or undefined on error.
+   */
   public async getQuote(p: IBtrSwapParams): Promise<ISquidQuoteResponse | undefined> {
     p = this.overloadParams(p);
     try {
@@ -221,6 +280,12 @@ export class Squid extends BaseAggregator {
     }
   }
 
+  /**
+   * Fetches transaction request data from Squid to perform a swap.
+   * Includes processing the quote and formatting the transaction.
+   * @param p - BTR Swap parameters.
+   * @returns Promise<ITransactionRequestWithEstimate | undefined> - Formatted transaction request or undefined on error.
+   */
   public async getTransactionRequest(
     p: IBtrSwapParams,
   ): Promise<ITransactionRequestWithEstimate | undefined> {
@@ -262,6 +327,11 @@ export class Squid extends BaseAggregator {
     }
   }
 
+  /**
+   * Maps Squid transaction status strings to standardized OpStatus enum.
+   * @param status - Squid transaction status string.
+   * @returns OpStatus - Standardized operation status.
+   */
   private mapSquidStatusToOpStatus = (status: string): OpStatus => {
     switch (status.toUpperCase()) {
       case "SUCCESS":
@@ -279,6 +349,11 @@ export class Squid extends BaseAggregator {
     }
   };
 
+  /**
+   * Parses the raw status response from Squid API into the standardized IStatusResponse format.
+   * @param status - Raw status response from Squid API.
+   * @returns IStatusResponse - Standardized status response.
+   */
   private parseTransactionStatus = (status: ISquidTransactionStatus): IStatusResponse => ({
     id: status.id,
     status: this.mapSquidStatusToOpStatus(status.squidTransactionStatus),
@@ -289,6 +364,11 @@ export class Squid extends BaseAggregator {
     substatusMessage: status.error?.message ?? "",
   });
 
+  /**
+   * Fetches the status of a transaction from the Squid API.
+   * @param params - Parameters including transaction ID and potentially chain IDs/hashes.
+   * @returns Promise<IStatusResponse | undefined> - Standardized status response or undefined on error.
+   */
   public async getStatus(params: IStatusParams): Promise<IStatusResponse | undefined> {
     try {
       if (!params.txId && !params.txHash) {

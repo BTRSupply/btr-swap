@@ -8,6 +8,10 @@ import { AggId } from "@/types";
  * @see https://github.com/LlamaSwap/interface/blob/master/src/components/Aggregator/adapters/airswap.ts
  */
 export class AirSwap extends JITAggregator {
+  /**
+   * Initializes the AirSwap aggregator.
+   * Sets up router and alias addresses for supported chains.
+   */
   constructor() {
     super(AggId.AIRSWAP);
     // No central baseApiUrl for AirSwap

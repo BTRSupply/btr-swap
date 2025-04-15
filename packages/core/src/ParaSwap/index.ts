@@ -25,6 +25,10 @@ import {
  * @see https://developers.paraswap.io/api/master
  */
 export class ParaSwap extends BaseAggregator {
+  /**
+   * Initializes the ParaSwap aggregator.
+   * Sets up router addresses and aliases for supported chains.
+   */
   constructor() {
     super(AggId.PARASWAP);
     this.routerByChainId = {
@@ -43,7 +47,10 @@ export class ParaSwap extends BaseAggregator {
   }
 
   /**
-   * Returns API headers for ParaSwap requests
+   * Generates the required headers for ParaSwap API requests.
+   * Includes API key if provided and optionally sets Content-Type.
+   * @param contentType - Whether to include 'Content-Type: application/json'.
+   * @returns Record<string, string> - Headers object.
    */
   private getHeaders(contentType = false): Record<string, string> {
     const headers: Record<string, string> = {};
@@ -57,7 +64,7 @@ export class ParaSwap extends BaseAggregator {
   }
 
   /**
-   * Converts BTR Swap parameters to ParaSwap API format.
+   * Converts BTR Swap parameters to the format expected by the ParaSwap API.
    * @param params - BTR Swap parameters
    * @param isPrice - Whether this is for a price quote (true) or transaction build (false)
    * @returns ParaSwap-specific parameters
@@ -84,7 +91,7 @@ export class ParaSwap extends BaseAggregator {
   }
 
   /**
-   * Fetches a price quote from the ParaSwap API.
+   * Fetches the best price route (quote) from the ParaSwap API.
    * @param p - BTR Swap parameters
    * @returns Promise resolving to the best price route, or undefined
    */
@@ -106,7 +113,8 @@ export class ParaSwap extends BaseAggregator {
   }
 
   /**
-   * Fetches a transaction request for a ParaSwap swap.
+   * Fetches transaction request data from ParaSwap to perform a swap.
+   * Involves fetching a quote and then building the transaction data.
    * @param p - BTR Swap parameters
    * @returns Promise resolving to the transaction request with estimates, or undefined
    */

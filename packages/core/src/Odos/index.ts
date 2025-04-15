@@ -26,6 +26,10 @@ import {
  * @see https://docs.odos.xyz/product/sor/v2/api-reference
  */
 export class Odos extends BaseAggregator {
+  /**
+   * Initializes the Odos aggregator.
+   * Sets up router addresses and aliases for supported chains.
+   */
   constructor() {
     super(AggId.ODOS);
     this.routerByChainId = {
@@ -43,7 +47,9 @@ export class Odos extends BaseAggregator {
   }
 
   /**
-   * Returns API headers for Odos requests
+   * Generates the required headers for Odos API requests.
+   * Includes API key if provided.
+   * @returns Record<string, string> - Headers object.
    */
   private getHeaders(): Record<string, string> {
     return {
@@ -52,6 +58,17 @@ export class Odos extends BaseAggregator {
     };
   }
 
+  /**
+   * Helper function to make requests to the Odos API.
+   * Primarily uses POST requests.
+   * @param endpoint - The API endpoint path (e.g., "sor/quote/v2").
+   * @param method - HTTP method (defaults to POST).
+   * @param body - Request body.
+   * @param chainId - The chain ID for the request.
+   * @returns Promise<T> - Parsed JSON response.
+   * @template T - Expected response type.
+   * @throws {Error} If chainId is missing.
+   */
   private apiRequest = async <T = any>(
     endpoint: string,
     method: "GET" | "POST" = "POST",
@@ -67,6 +84,11 @@ export class Odos extends BaseAggregator {
     });
   };
 
+  /**
+   * Converts BTR Swap parameters to the format expected by the Odos quote API.
+   * @param p - BTR Swap parameters.
+   * @returns IOdosQuoteParams - Odos API compatible quote parameters.
+   */
   protected convertParams = (p: IBtrSwapParams): IOdosQuoteParams => {
     return {
       // Use p.input.chainId
@@ -91,6 +113,14 @@ export class Odos extends BaseAggregator {
     };
   };
 
+  /**
+   * Processes the raw transaction request data from Odos and formats it.
+   * Calculates estimates based on the quote and structures swap steps.
+   * @param tx - Partial transaction request data from the assemble endpoint.
+   * @param params - Original BTR Swap parameters.
+   * @param quote - Quote response from the Odos API.
+   * @returns ITransactionRequestWithEstimate - Formatted transaction request with estimates.
+   */
   private processTransactionRequest = (
     tx: Partial<TransactionRequest>,
     params: IBtrSwapParams,
@@ -134,6 +164,11 @@ export class Odos extends BaseAggregator {
     });
   };
 
+  /**
+   * Fetches a quote from the Odos API.
+   * @param p - BTR Swap parameters.
+   * @returns Promise<IOdosQuoteResponse | undefined> - The Odos quote response or undefined on error.
+   */
   public async getQuote(p: IBtrSwapParams): Promise<IOdosQuoteResponse | undefined> {
     p = this.overloadParams(p);
     try {
@@ -163,6 +198,12 @@ export class Odos extends BaseAggregator {
     }
   }
 
+  /**
+   * Fetches transaction request data from Odos to perform a swap.
+   * Involves fetching a quote and then assembling the transaction.
+   * @param p - BTR Swap parameters.
+   * @returns Promise<ITransactionRequestWithEstimate | undefined> - Formatted transaction request or undefined on error.
+   */
   public async getTransactionRequest(
     p: IBtrSwapParams,
   ): Promise<ITransactionRequestWithEstimate | undefined> {
@@ -195,7 +236,7 @@ export class Odos extends BaseAggregator {
 
       const tx: Partial<TransactionRequest> = {
         // No aggId here
-        approvalAddress: transaction.to, // Odos router needs approval
+        approveTo: transaction.to, // Odos router needs approval
         from: transaction.from,
         to: transaction.to,
         data: transaction.data,

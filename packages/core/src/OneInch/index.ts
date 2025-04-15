@@ -25,6 +25,10 @@ import {
  * @see https://portal.1inch.dev/documentation/swap/swagger
  */
 export class OneInch extends BaseAggregator {
+  /**
+   * Initializes the 1inch aggregator.
+   * Sets up router addresses and aliases for supported chains.
+   */
   constructor() {
     super(AggId.ONE_INCH);
     // Fusion v2 Routers
@@ -44,8 +48,9 @@ export class OneInch extends BaseAggregator {
   }
 
   /**
-   * Constructs the 1inch API root URL for a given chain ID.
-   * Overrides BaseAggregator.getApiRoot to add chain-specific path.
+   * Gets the base API URL for a given chain ID for the 1inch API.
+   * @param chainId - The chain ID.
+   * @returns string - The API root URL for the chain.
    * @throws {Error} If chain is not supported
    */
   protected getApiRoot(chainId: number): string {
@@ -54,7 +59,9 @@ export class OneInch extends BaseAggregator {
   }
 
   /**
-   * Returns authentication headers for 1inch API requests
+   * Generates the required headers for 1inch API requests.
+   * Includes API key (as Bearer token) if provided.
+   * @returns Record<string, string> - Headers object.
    */
   private getHeaders = (): Record<string, string> => ({
     accept: "application/json",
@@ -62,7 +69,7 @@ export class OneInch extends BaseAggregator {
   });
 
   /**
-   * Converts BTR Swap parameters to 1inch API format.
+   * Converts BTR Swap parameters to the format expected by the 1inch API.
    * @param p - BTR Swap parameters
    * @returns Record of parameters formatted for 1inch API
    */
@@ -85,7 +92,7 @@ export class OneInch extends BaseAggregator {
   }
 
   /**
-   * Fetches a quote from the 1inch API.
+   * Fetches a quote from the 1inch API, including gas estimate.
    * @param p - Swapper parameters.
    * @returns Promise resolving to the quote response, or undefined on error.
    */
@@ -105,7 +112,10 @@ export class OneInch extends BaseAggregator {
   }
 
   /**
-   * Fetches a transaction request for a 1inch swap.
+   * Fetches transaction request data from 1inch to perform a swap.
+   * Fetches swap data and implicitly gets quote data for estimates.
+   * @param p - BTR Swap parameters.
+   * @returns Promise<ITransactionRequestWithEstimate | undefined> - Formatted transaction request or undefined on error.
    */
   public async getTransactionRequest(
     p: IBtrSwapParams,
@@ -116,9 +126,9 @@ export class OneInch extends BaseAggregator {
       const chainId = Number(p.input.chainId);
       const apiRoot = this.getApiRoot(chainId);
       const headers = this.getHeaders();
-      const approvalAddress = this.getApprovalAddress(chainId);
+      const approveTo = this.getApprovalAddress(chainId);
 
-      if (!approvalAddress) throw new Error(`[OneInch] No approval address for chain ${chainId}`);
+      if (!approveTo) throw new Error(`[OneInch] No approval address for chain ${chainId}`);
 
       // Prepare request parameters
       const baseParams = this.convertParams(p);
@@ -137,8 +147,8 @@ export class OneInch extends BaseAggregator {
         throw formatError("Invalid API response", 500, { swap });
       }
 
-      if (swap.tx.to?.toLowerCase() !== approvalAddress.toLowerCase()) {
-        throw formatError(`Router mismatch: ${swap.tx.to} vs ${approvalAddress}`, 500, swap);
+      if (swap.tx.to?.toLowerCase() !== approveTo.toLowerCase()) {
+        throw formatError(`Router mismatch: ${swap.tx.to} vs ${approveTo}`, 500, swap);
       }
 
       const quote = await this.getQuote(p);
