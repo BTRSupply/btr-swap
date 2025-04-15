@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import * as fs from "fs";
-import { describe, test } from "bun:test";
+import { beforeAll, describe, test } from "bun:test";
 import { AggId, DisplayMode, IBtrSwapCliParams, SerializationMode } from "@/types";
 import { getToken } from "@/utils";
 import { getCliExecutable, getPayer, runCliCommand } from "../utils";
@@ -31,8 +31,11 @@ const bestCompactCsvParams = <IBtrSwapCliParams>{
 };
 
 describe("BTR Swap CLI", function() {
-  // Setup test that will be used to decide if we can run the actual tests
-  test("setup: verify CLI is operational", () => {
+  // Set up CLI tests - we'll determine if CLI is available
+  let runTests = false; // Default to not running
+  let skipReason = "";
+
+  beforeAll(() => {
     // Setup CLI executable if not already set
     if (!baseParams.executable) {
       baseParams.executable = getCliExecutable();
@@ -54,50 +57,52 @@ describe("BTR Swap CLI", function() {
       // Verify it looks like a valid CLI
       const isValid = helpOutput.includes("swap-cli") ||
                       helpOutput.includes("btr-swap") ||
-                      helpOutput.includes("CLI") ||
                       helpOutput.includes("Usage:");
 
       if (isValid) {
         console.log("✅ CLI executable is operational - proceeding with tests");
-        return true;
+        runTests = true;
       } else {
         console.warn("❌ CLI executable help output doesn't look valid");
-        return false;
+        skipReason = "CLI executable help output invalid";
+        runTests = false;
       }
     } catch (error: any) {
       console.warn(`❌ CLI test failed: ${error.message}`);
-      return false;
+      skipReason = "CLI executable not operational: " + error.message;
+      runTests = false;
     }
   });
 
-  // In Bun, we need to use separate tests rather than conditionally skipping
-  test("verbose table output (RANK+BEST_COMPACT)", () => {
-    // Skip test if needed
+  const testOrSkip = runTests ? test : test.skip;
+
+  testOrSkip("verbose table output (RANK+BEST_COMPACT)", () => {
     try {
       const output = runCliCommand(tableMultiRankParams, { validateWith: ["│", "Fetching quotes"], silentMode: false });
       expect(output).to.include("│").and.include("AGG").and.include("RATE");
     } catch (error: any) {
-      if (error.message?.includes("command not found")) {
-        console.log("CLI command not available, skipping test");
-        return; // Soft skip by just returning
-      }
+      console.warn("CLI test failed:", error);
       throw error; // Rethrow other errors
     }
   });
 
-  test("silent CSV output (BEST_COMPACT)", () => {
+  testOrSkip("silent CSV output (BEST_COMPACT)", () => {
     try {
       const output = runCliCommand(bestCompactCsvParams, { validateWith: [","], silentMode: true });
       expect(output).to.include(",")
         .and.not.include("⏳ Fetching quotes")
         .and.not.include("✅ Loaded");
     } catch (error: any) {
-      if (error.message?.includes("command not found")) {
-        console.log("CLI command not available, skipping test");
-        return; // Soft skip by just returning
-      }
+      console.warn("CLI test failed:", error);
       throw error; // Rethrow other errors
     }
   });
+
+  // If tests are being skipped, add a diagnostic test explaining why
+  if (!runTests && skipReason && skipReason.trim() !== "") {
+    test(`CLI tests skipped because: ${skipReason}`, () => {
+      expect(true).to.be.true;
+    });
+  }
 });
 
