@@ -10,12 +10,16 @@ NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 ### Fixes
 
 - [fix] Added 'git add -u' after 'lint:fix' in 'pre-commit' to stage fixed already-tracked files
+- [fix] Added dev/main to 'post-checkout' hook exclusion (glitchy name check)
+- [fix] Added git add on pre-commit post-fix
 - [fix] Updated/fixed 'release.js' release script to remove dangling github tags from failed publishing, and changelog generation fix
 - [fix] Updated/fixed 'release.js' release script to replace changelog entry in case of a publish failure
 
 ### Ops
 
+- [ops] Add branch validation script for release commands
 - [ops] Enhance git hooks and release automation
+- [ops] Updated changelog
 
 ## [1.26.0] - 2025-04-14
 
