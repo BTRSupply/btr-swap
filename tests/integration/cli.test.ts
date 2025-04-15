@@ -7,6 +7,7 @@ import { getCliExecutable, getPayer, runCliCommand } from "../utils";
 import { execSync } from "child_process";
 
 const baseParams = <IBtrSwapCliParams>{
+  executable: "swap-cli",
   payer: process.env.TEST_PAYER ?? getPayer(56),
   input: getToken("USDC", 56),
   output: getToken("WETH", 56),

@@ -351,10 +351,11 @@ export const formatCliToken = (t: IToken | TokenInfoTuple | string, chainId = 1)
 /** Build CLI command string from options */
 export const buildCliCommand = (p: IBtrSwapCliParams): string => {
   const {
-    executable = "btr-swap",
+    executable = "swap-cli",
     maxSlippage = MAX_SLIPPAGE_BPS,
     displayModes = [DisplayMode.RANK, DisplayMode.BEST_COMPACT],
     serializationMode = SerializationMode.JSON,
+    silent = false
   } = p;
 
   const flags = [
