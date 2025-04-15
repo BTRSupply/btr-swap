@@ -1,4 +1,8 @@
 import { assert } from "chai";
+import { execSync } from "child_process";
+import * as fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 import { addresses, MAX_SLIPPAGE_BPS } from "@/constants";
 import { getAllTimedTr } from "@/index";
@@ -309,30 +313,25 @@ export async function runSwapTests(
   validateResult = true,
 ): Promise<void> {
   // Process one test case at a time to ensure proper throttling
-  for (let i = 0; i < testCases.length; i++) {
+  for (const [i, testCase] of testCases.entries()) {
     if (i > 0) await sleep(throttleDelayMs);
-
-    const testCase = testCases[i];
     const testInfo = paramsToString(testCase);
     console.log(`${testType}: ${testInfo}`);
 
     try {
       const allTrs = await getAllTimedTr(testCase);
-
-      if (!allTrs || allTrs.length === 0) {
-        console.error(`❌ ${testInfo}: No transaction requests found`);
-        throw new Error("No transaction requests found");
+      if (!allTrs?.length) {
+        throw new Error(`❌ ${testInfo}: No transaction requests found`);
       }
 
-      console.log(getTrPerformanceTable(allTrs)); // table of all transaction requests
-      console.log(toJSON(allTrs[0]!)); // detailed request and estimates for the best route
+      console.log(getTrPerformanceTable(allTrs));
+      console.log(toJSON(allTrs[0]!));
 
-      // Validate the best transaction request if required
-      if (validateResult && allTrs.length > 0) assertTr(allTrs[0], false);
+      if (validateResult) assertTr(allTrs[0], false);
       console.log(`✅ ${testInfo}`);
     } catch (error) {
       console.error(`❌ ${testInfo}:`, error);
-      throw error; // Rethrow to fail the test
+      throw error;
     }
   }
 }
@@ -344,9 +343,7 @@ export async function runSwapTests(
  * @returns Formatted token string for CLI
  */
 export const formatCliToken = (t: IToken | TokenInfoTuple | string, chainId = 1): string => {
-  if (typeof t === "string" || Array.isArray(t)) {
-    t = getToken(t, chainId);
-  }
+  if (typeof t === "string" || Array.isArray(t)) t = getToken(t, chainId);
   if (!t) throw new Error(`[formatCliToken] Token not found: ${t}`);
   return `${t.chainId}:${t.address}:${t.symbol}:${t.decimals || 18}`;
 };
@@ -365,13 +362,79 @@ export const buildCliCommand = (p: IBtrSwapCliParams): string => {
     p.referrerCodes && `--referrer-codes ${JSON.stringify(p.referrerCodes)}`,
     p.integratorIds && `--integrator-ids ${JSON.stringify(p.integratorIds)}`,
     p.feesBps && `--fees-bps ${JSON.stringify(p.feesBps)}`,
-  ]
-    .filter(Boolean)
-    .join(" ");
+    p.silent && "--silent",
+  ].filter(Boolean).join(' ');
 
-  return `${executable} \
+  return `${executable} quote \
 --input ${formatCliToken(p.input)} --output ${formatCliToken(p.output)} \
 --input-amount ${p.inputAmountWei} --payer ${p.payer} --max-slippage ${maxSlippage} \
 --aggregators ${p.aggIds?.join(",")} --display-modes ${displayModes.join(",")} \
---serialization-mode ${serializationMode.toLowerCase()}${flags ? " " + flags : ""}`;
+--serialization-mode ${serializationMode.toLowerCase()}${flags ? ' ' + flags : ''}`;
 };
+
+/**
+ * Get CLI executable path
+ * @returns Path to the CLI executable
+ */
+export function getCliExecutable(): string {
+  // Detect available runtime (bun or node)
+  const detectRuntime = (): string => {
+    for (const runtime of ["bun", "node"]) {
+      try { execSync(`command -v ${runtime}`, { stdio: "ignore" }); return runtime; } catch {}
+    }
+    throw new Error("Missing runtime: bun or node");
+  };
+
+  // Get path to package root directory
+  try {
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+    const packageRoot = path.resolve(__dirname, "..");
+    const { bin } = JSON.parse(fs.readFileSync(path.join(packageRoot, "package.json"), "utf8"));
+    const fullPath = path.join(packageRoot, bin?.["swap-cli"] ?? "./dist/cli/cli.js");
+
+    if (!fs.existsSync(fullPath)) {
+      console.warn(`CLI executable not found at ${fullPath} - run 'bun run build'`);
+      return "swap-cli";
+    }
+
+    return `${detectRuntime()} ${path.relative(process.cwd(), fullPath)}`;
+  } catch (error: any) {
+    console.warn(`CLI executable warning: ${error.message}`);
+    return "swap-cli";
+  }
+}
+
+/**
+ * Run CLI command and validate output
+ * @param params CLI parameters
+ * @param options Test options
+ * @returns CLI output
+ */
+export function runCliCommand(
+  params: IBtrSwapCliParams,
+  options: { validateWith?: string[]; silentMode?: boolean } = {}
+): string {
+  const command = buildCliCommand(params);
+  console.log("Running command:", command);
+
+  try {
+    const output = execSync(command, { maxBuffer: 1024 * 1024 * 10 }).toString();
+
+    if (options.validateWith?.length) {
+      assert(options.validateWith.some(t => output.includes(t)),
+        `Missing expected output: ${options.validateWith.join(", ")}`);
+    }
+
+    if (options.silentMode) {
+      assert(!output.includes("⏳ Fetching quotes") && !output.includes("✅ Loaded"),
+        "Silent mode should hide progress messages");
+    }
+
+    return output;
+  } catch (error: any) {
+    console.error("Command error:", command);
+    error.stdout?.toString() && console.log(error.stdout.toString());
+    error.stderr?.toString() && console.error(error.stderr.toString());
+    throw error;
+  }
+}
