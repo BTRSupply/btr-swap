@@ -1,64 +1,61 @@
-# Changelog
+# BTR Swap Changelog
 
-All notable changes to this project will be documented in this file.
+All changes to this project will be documented in this log file.
+Based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and adhering to [SemVer](https://semver.org/spec/v2.0.0.html).
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for details on commit message categories.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-For details on commit message categories, see [CONTRIBUTING.md](./CONTRIBUTING.md).
+NB: This file is [generated from commit history](./scripts/release.js), DO NOT EDIT MANUALLY.
 
 ## [1.26.0] - 2025-04-15
 
 ### Fixes
 
-- [fix] added 'git add -u' after 'lint:fix' in 'pre-commit' to stage fixed already-tracked files
+- [fix] Added 'git add -u' after 'lint:fix' in 'pre-commit' to stage fixed already-tracked files
 
 ### Ops
 
 - [ops] Enhance git hooks and release automation
 
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
 ## [1.25.0] - 2025-04-14
 
-### Added
+### Features
 
-- Consolidated initial development (including pre-fork code from [Astrolab Swapper](https://github.com/AstrolabDAO/swapper)) and CI/CD setup into a single historical commit.
-- This commit squashes the project's history up to version 1.25.0.
+- [feat] Rango meta-aggregator implementation
+- [feat] Unizen meta-aggregator implementation
+- [feat] Odos aggregator implementation
+- [feat] Intent/permit2-centric JITAggregator placeholder class added
+- [feat] Added common interfaces (IToken, IEstimate, IStatusResponse)
 
-### Key changes include:
+### Fixes
 
-**Core Aggregator Logic (Pre-fork & Initial):**
+- [fix] Resolve npm/GitHub package scope and authentication issues
+- [fix] Align package versions across the monorepo
 
-- Implemented core swapping and bridging logic integrating with Lifi and Squid.
-- Developed common interfaces (IToken, IEstimate, IStatusResponse).
-- Remove on-chain Swapper contract (`Swapper.sol`) since out of scope for this package.
-- Introduced initial unit and integration tests.
+### Refactors
 
-**Project Setup & Fork:**
+- [refac] Squid now extends BaseAggregator
+- [refac] LiFi now extends BaseAggregator
+- [refac] Socket now extends BaseAggregator
+- [refac] 1Inch now extends BaseAggregator
+- [refac] KyberSwap now extends BaseAggregator
+- [refac] ParaSwap now extends BaseAggregator
+- [refac] 0x now extends BaseAggregator
+- [refac] Remove on-chain Astrolab Swapper contract as out of scope
+- [refac] Consolidate complex commit history into a single historical commit
+- [refac] Refactor release scripts from CommonJS to ESM
 
-- Forked from original [Astrolab Swapper](https://github.com/AstrolabDAO/swapper).
-- Initialized monorepo structure (`btr-swap`) using Bun workspaces.
-- Established core (@btr-supply/swap) and CLI (@btr-supply/swap-cli) packages.
-- Configured TypeScript, Prettier, OXLint, and Husky for code quality.
+### Ops
 
-**CI/CD Workflow (.github/workflows/release.yml):**
+- [ops] Configure TypeScript, Prettier, OXLint, and Husky for code quality
+- [ops] Implement automated version bumping and changelog generation
+- [ops] Create robust build process for both packages
+- [ops] Set up automated publishing to npmjs.org and GitHub Packages
+- [ops] Configure artifact upload/download for efficient job communication
+- [ops] Set up core (@btr-supply/swap) and CLI (@btr-supply/swap-cli) packages
+- [ops] Initialize monorepo structure with Bun workspaces
 
-- Implemented automated version bumping, changelog generation, and GitHub Release creation (with attached tarballs).
-- Created a robust build process for both packages using Bun.
-- Set up automated publishing to npmjs.org and GitHub Packages using matrix strategy.
-- Resolved numerous authentication and scope issues related to npm/GitHub Packages, including:
-  - Handling case sensitivity differences between GitHub org (`BTRSupply` -> `btr-supply`) and package scope (`@btr-supply`).
-  - Correctly configuring `.npmrc` via `setup-node` and manual steps.
-  - Managing `NODE_AUTH_TOKEN` for different registries.
-- Configured artifact upload/download for efficient job communication.
-- Refactored release scripts (CommonJS to ESM).
+### Docs
 
-**Versioning & Cleanup:**
+- [docs] Document project setup and fork from Astrolab Swapper, update ./README.md
 
-- Consolidated complex commit history (including many version bumps) into one for clarity.
-- Aligned package versions across the monorepo.
-- Set final version to 1.25.0 to reflect this consolidation.
+> **Note:** This release consolidates the initial development (including pre-fork code) and CI/CD setup from the original [Astrolab Swapper](https://github.com/AstrolabDAO/swapper) project.
