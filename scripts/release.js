@@ -55,7 +55,7 @@ const getCommits = () => {
     const lastTag = execSync('git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD').toString().trim();
     return execSync(`git log ${lastTag}..HEAD --pretty=format:"%s"`)
       .toString().split('\n').filter(c => c && !c.startsWith('Merge '));
-  } catch (e) {
+  } catch {
     console.warn('Warning: Could not fetch commits.');
     return [];
   }
