@@ -12,10 +12,10 @@ const fail = (type, val) => (console.error(`\n[POLICY] Invalid ${type}: ${val}\n
 const run = cmd => { try { return exec(cmd, { stdio: 'pipe' }).toString().trim(); } catch { return ''; } };
 
 const branch = run('git rev-parse --abbrev-ref HEAD');
-const isMain = ['main', 'HEAD'].includes(branch);
+const isProtectedBranch = ['main', 'dev', 'HEAD'].includes(branch);
 
 // Checks
-(checkBranch || checkPush) && !isMain && !RegExp(pattern('branch')).test(branch) && fail('branch', branch);
+(checkBranch || checkPush) && !isProtectedBranch && !RegExp(pattern('branch')).test(branch) && fail('branch', branch);
 
 if (checkCommit && msgFile) {
   try {
@@ -24,7 +24,7 @@ if (checkCommit && msgFile) {
   } catch (err) { fail('read', err.message); }
 }
 
-if (checkPush && !isMain) {
+if (checkPush && !isProtectedBranch) {
   let range = run('git rev-parse --abbrev-ref --symbolic-full-name @{u}') || (() => {
     const mainBranch = run('git show-ref --verify --quiet refs/heads/main && echo main || echo master');
     return (mainBranch && run(`git merge-base HEAD ${mainBranch}`)) || 'HEAD~1';
