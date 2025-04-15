@@ -3,9 +3,7 @@ export interface Stringifiable {
   toString(): string;
 }
 
-/**
- * Represents the unique identifier for each supported DEX/Bridge aggregator.
- */
+/** Enumeration of supported DEX aggregators. */
 export enum AggId {
   // Meta-Aggregators (Order matches src/index.ts imports)
   LIFI = "LIFI",
@@ -76,14 +74,12 @@ export enum OpStatus {
   NOT_FOUND = "NOT_FOUND",
 }
 
-/** Specifies the desired output format for data serialization. */
 export enum SerializationMode {
   JSON = "JSON",
   CSV = "CSV",
   TABLE = "TABLE",
 }
 
-/** Controls how swap results should be presented or filtered. */
 export enum DisplayMode {
   // full transaction request with estimates
   ALL = "ALL",
@@ -98,11 +94,8 @@ export enum DisplayMode {
 /** Tuple type representing basic token information: [address, symbol, decimals] */
 export type TokenInfoTuple = [address: string, symbol: string, decimals?: number];
 
-/**
- * Defines the structure for token information, including address, chain ID, symbol, and decimals.
- */
+/** Common token representation used across different aggregators. */
 export interface IToken {
-  /** The contract address of the token. */
   chainId: number;
   address?: string;
   name: string;
@@ -121,168 +114,139 @@ export interface IProtocol {
   logo?: string; // svg or uri
 }
 
-/**
- * Represents the input token and amount for a swap operation.
- * Includes the payer address, which is the source of the funds.
- */
-export interface IInput {
-  /** The token to be swapped. */
-  token: IToken;
-  /** The amount of the input token to swap, in its smallest unit (e.g., wei). */
-  amount: string; // Amount in smallest unit (e.g., wei)
-  /** The address sending the input tokens (and potentially initiating the transaction). */
-  payer: string;
-}
-
-/**
- * Represents the desired output token for a swap operation.
- * Optionally includes the receiver address if different from the payer.
- */
-export interface IOutput {
-  /** The desired output token. */
-  token: IToken;
-  /**
-   * The address that will receive the output tokens.
-   * Defaults to the `payer` address from {@link IInput} if not provided.
-   */
-  receiver?: string;
-  /** Optional: Chain ID for the output token, used for cross-chain swaps. Defaults to input chain ID if not provided. */
-  chainId?: number;
-}
-
-/**
- * Encapsulates all parameters required for a BTR Swap operation.
- * This includes input/output details, slippage tolerance, preferred aggregators, and optional settings.
- */
-export interface IBtrSwapParams {
-  /** Input token details, amount, and payer address. */
-  input: IInput;
-  /** Output token details and optional receiver address/chain ID. */
-  output: IOutput;
-  /**
-   * Maximum allowed slippage percentage in basis points (e.g., 50 for 0.5%).
-   * Defaults to a value from `@/constants` if not provided.
-   */
-  maxSlippage?: number;
-  /**
-   * An array of aggregator IDs to query.
-   * If empty or undefined, all supported aggregators may be queried.
-   */
-  aggIds?: AggId[];
-  /** Optional: A unique identifier for tracking or associating the request. */
-  requestId?: string;
-  /** Internal flag to indicate if parameters have already been processed/overloaded. */
-  _overloaded?: boolean;
-  /** Optional: Allows specifying the gas price to use for the transaction (implementation depends on the wallet/signer). */
-  gasPrice?: string;
-  /** Optional: Specifies if the transaction should be gasless (requires EIP-712/1271 signatures and aggregator support). */
-  gasless?: boolean;
-  /** Optional: Specific fee address for BTR platform fees. */
-  feeAddress?: string;
-  /** Optional: Referrer address for tracking or fee sharing. */
-  referrer?: string;
-}
-
-/**
- * Represents a single step within a multi-step swap transaction (e.g., approve, then swap).
- */
-export interface IStep {
-  /** A descriptive name or type for the step (e.g., "approve", "swap", "bridge"). */
-  type: string;
-  /** The chain ID where this step occurs. */
-  chainId: number;
-  /** Input token for this step. */
-  fromToken: IToken;
-  /** Output token for this step. */
-  toToken: IToken;
-  /** Estimated amount of input token for this step. */
-  fromAmount?: string;
-  /** Estimated amount of output token for this step. */
-  toAmount?: string;
-  /** Estimated gas cost for this step in native currency units. */
-  gasCost?: string;
-  /** Estimated time for this step in seconds. */
-  timeEstimate?: number;
-  /** Optional: Detailed breakdown of fees for this step. */
-  fees?: any; // TODO: Standardize fee structure
-  /** Optional: Underlying tool or protocol used for this step (e.g., "uniswap", "connext"). */
-  tool?: string;
-}
-
-/**
- * Contains global estimates for the entire swap operation, aggregating data from individual steps.
- */
-export interface IGlobalEstimates {
-  /** Estimated amount of the output token received, in its smallest unit. */
-  toAmount: string;
-  /** Estimated total gas cost in native currency units. */
-  gasCost?: string;
-  /** Estimated total fee amount (platform + LP fees) in USD or native currency. */
-  feeCost?: string;
-  /** Estimated total time for the entire swap in seconds. */
-  timeEstimate?: number;
-}
-
-/**
- * Represents the structure of a transaction request, suitable for sending to an Ethereum provider (like ethers.js).
- * Includes essential fields like `to`, `data`, and `value`.
- */
-export interface ITransactionRequest {
-  /** The target contract address for the transaction. */
-  to: string;
-  /** The encoded transaction data (including function signature and arguments). */
-  data: string;
-  /** The amount of native currency (e.g., ETH, MATIC) to send with the transaction, in wei. */
-  value: string;
-  /** Optional: The gas price to use for the transaction. */
-  gasPrice?: string;
-  /** Optional: The gas limit to set for the transaction. */
-  gasLimit?: string;
-  /** Optional: The specific `from` address (usually the payer). */
+/** Represents a blockchain transaction request, compatible with ethers.js/viem structures. */
+export type TransactionRequest = {
+  to?: string;
   from?: string;
+  nonce?: bigint | string | Stringifiable;
+  gasLimit?: bigint | string | Stringifiable;
+  gasPrice?: bigint | string | Stringifiable;
+  data?: Uint8Array | string;
+  value?: bigint | string | Stringifiable;
+  chainId?: number;
+  type?: number;
+  maxPriorityFeePerGas?: bigint | string | Stringifiable;
+  maxFeePerGas?: bigint | string | Stringifiable;
+  // add-ons
+  aggId?: AggId;
+  approveTo?: string;
+  customData?: Record<string, any>;
+  latencyMs?: number; // Time taken by the aggregator to respond
+};
+
+/** Represents a custom contract call to be potentially included in a swap route. */
+export interface ICustomContractCall {
+  toAddress?: string;
+  callData: string;
+  gasLimit?: string;
+  inputPos?: number;
 }
 
-/**
- * Extends {@link ITransactionRequest} to include swap-specific estimates and details.
- * This is the standard format returned by `getTransactionRequest` in {@link BaseAggregator}.
- */
-export interface ITransactionRequestWithEstimate extends ITransactionRequest {
-  /** The aggregator that generated this transaction request. */
-  aggId: AggId;
-  /** Detailed steps involved in the transaction. */
-  steps: IStep[];
-  /** Global estimates for the entire swap. */
-  globalEstimates: IGlobalEstimates;
-  /** The original swap parameters used to generate this request. */
-  originalParams: IBtrSwapParams;
-  /** Latency in milliseconds for the aggregator to generate this transaction request. */
-  latencyMs?: number;
+/** Core parameters required for fetching a swap quote or transaction. */
+export interface IBtrSwapParams {
+  aggIds?: AggId[];
+  input: IToken;
+  output: IToken;
+  inputAmountWei: string | number | bigint | Stringifiable;
+  outputAmountWei?: string | number | bigint | Stringifiable; // niche, use input instead
+  payer: string;
+  testPayer?: string; // for testing, default to payer
+  receiver?: string; // default to payer
+  integrator?: string; // project id / integrator id
+  referrer?: string; // referrer address or code
+  maxSlippage?: number; // default to 500 (5%)
+  customContractCalls?: ICustomContractCall[];
+  bridgeBlacklist?: string[]; // exclude bridges
+  exchangeBlacklist?: string[]; // exclude exchanges
+  sendGas?: boolean; // default to false
+  overloaded?: boolean; // default to false
+  expiryMs?: number; // default to 5s
 }
 
-/**
- * Parameters required for checking the status of a cross-chain transaction.
- */
+/** Extended parameters for CLI operations. */
+export interface IBtrSwapCliParams extends IBtrSwapParams {
+  apiKeys?: Record<string, string>;
+  integratorIds?: Record<string, string>;
+  referrerCodes?: Record<string, string | number>;
+  feesBps?: Record<string, number>;
+  displayModes?: DisplayMode[];
+  serializationMode?: SerializationMode;
+  envFile?: string;
+  executable?: string;
+  silent?: boolean;
+}
+
+/** Estimate details for a swap step. */
+export interface ISwapEstimate {
+  exchangeRate?: string | number;
+  input?: string | number; // decimal
+  inputWei?: string | bigint;
+  output?: string | number; // decimal
+  outputWei?: string | bigint;
+  slippage?: string | number; // default to 0
+  priceImpact?: string | number; // default to 0
+}
+
+/** Consolidated gas and fee estimates for a transaction. */
+export interface ICostEstimate {
+  gasCostUsd: number;
+  gasCostWei: bigint;
+  feeCostUsd: number;
+  feeCostWei: bigint;
+  feeToken?: IToken; // by default, the fee is in the same token as the input token
+}
+
+/** Represents a single step within a complex swap route (e.g., swap, bridge). */
+export interface ISwapStep {
+  id?: string;
+  type: StepType;
+  description?: string;
+  input?: IToken;
+  output?: IToken;
+  inputChainId?: number;
+  outputChainId?: number;
+  payer?: string;
+  receiver?: string;
+  protocol?: IProtocol;
+  estimates?: ISwapEstimate & ICostEstimate;
+}
+
+/** Extends the base TransactionRequest with swap-specific estimates and details. */
+export interface ITransactionRequestWithEstimate extends TransactionRequest {
+  params: IBtrSwapParams;
+  steps: ISwapStep[]; // should at least have one step
+  globalEstimates: ISwapEstimate & ICostEstimate; // if one step, this is the step's estimates
+  latencyMs: number; // Response time from the aggregator in milliseconds
+}
+
+/** Performance metrics for a quote/transaction request. */
+export interface IQuotePerformance {
+  aggId: string;
+  exchangeRate: number;
+  output: number;
+  gasCostUsd: number;
+  feeCostUsd: number;
+  latencyMs: number;
+  steps: number;
+  protocols: string[];
+}
+
+/** Parameters for fetching the status of a transaction. */
 export interface IStatusParams {
-  /** The hash of the transaction initiated on the source chain. */
-  txHash: string;
-  /** The chain ID of the source chain. */
-  fromChainId: number;
-  /** The chain ID of the destination chain. */
-  toChainId: number;
+  aggId?: AggId;
+  inputChainId?: string;
+  outputChainId?: string;
+  txHash?: string;
+  txId: string;
 }
 
-/**
- * Standardized response structure for transaction status checks.
- */
+/** Response structure for transaction status requests. */
 export interface IStatusResponse {
-  /** The current status of the transaction (e.g., PENDING, DONE, FAILED). */
+  id: string;
   status: OpStatus;
-  /** Optional: The hash of the transaction on the destination chain, if completed. */
-  destTxHash?: string;
-  /** Optional: A message providing more details about the status or any errors. */
-  message?: string;
-  /** Optional: Link to a block explorer for the source transaction. */
-  srcExplorerUrl?: string;
-  /** Optional: Link to a block explorer for the destination transaction. */
-  destExplorerUrl?: string;
+  txHash?: string;
+  receivingTx?: string;
+  sendingTx?: string;
+  substatus?: string;
+  substatusMessage?: string;
 }
