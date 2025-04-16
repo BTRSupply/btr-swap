@@ -5,6 +5,12 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
+## [1.32.0] - 2025-04-16
+
+### Ops
+
+- [ops] Fix YAML formatting in release workflow
+
 ## [1.31.0] - 2025-04-16
 
 ### Ops
