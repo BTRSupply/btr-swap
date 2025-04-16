@@ -80,6 +80,7 @@ node_modules
 .lock-wscript
 *.lock
 *-lock.*
+*.tgz
 
 # python
 venv/
