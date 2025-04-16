@@ -5,6 +5,7 @@ import { unlink } from 'node:fs/promises';
 
 const readmeCopyTo = join(resolve('.'), 'packages/core/README.md');
 
+// Remove copied README
 const cleanup = async () =>
   existsSync(readmeCopyTo) &&
   (await unlink(readmeCopyTo)

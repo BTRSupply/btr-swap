@@ -29,8 +29,6 @@ jobs:
         run: bun install
 
       - name: Build packages
-        env:
-          KEEP_README: "true"
         run: bun run build
 
       - name: Get version from tag

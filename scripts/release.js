@@ -117,7 +117,7 @@ writeFileSync(LOG, log.includes('## [')
 );
 
 try {
-  execSync('bun run build', { stdio: 'inherit', env: { ...process.env, KEEP_README: 'true' } });
+  execSync('bun run build', { stdio: 'inherit' });
   execSync('bun scripts/cleanup.js', { stdio: 'inherit' });
 } catch (e) {
   console.warn(`Build error: ${e.message}`);
