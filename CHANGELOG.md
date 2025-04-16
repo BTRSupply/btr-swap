@@ -5,6 +5,22 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
+## [1.29.0] - 2025-04-16
+
+### Features
+
+- [feat] Add btr-swap command alias and update CLI help text
+- [feat] Add version flag and ASCII art header to CLI
+
+### Refactors
+
+- [refac] Remove unused command name detection function
+
+### Ops
+
+- [ops] Add explicit \*.tgz entries to gitignore
+- [ops] Remove tsbuildinfo files from git tracking
+
 ## [1.28.0] - 2025-04-16
 
 ### Fixes
