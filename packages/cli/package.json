@@ -28,8 +28,7 @@
   },
   "files": [
     "dist/",
-    "README.md",
-    "CHANGELOG.md"
+    "README.md"
   ],
   "dependencies": {
     "@btr-supply/swap": "1.29.0",

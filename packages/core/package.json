@@ -43,8 +43,7 @@
   "scripts": {},
   "files": [
     "dist/",
-    "README.md",
-    "CHANGELOG.md"
+    "README.md"
   ],
   "devDependencies": {
     "@types/chai": "^5.2.1",

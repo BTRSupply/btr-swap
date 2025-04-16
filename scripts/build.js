@@ -18,7 +18,7 @@ async function buildCore() {
     outdir: join(rootDir, 'packages/core/dist'),
     target: 'bun',
     format: 'esm',
-    sourcemap: 'external',
+    sourcemap: 'none',
     plugins: [
       dts({
         // You can provide additional options here if needed
@@ -34,9 +34,8 @@ async function buildCore() {
     process.exit(1);
   }
 
-  // Copy README.md and CHANGELOG.md to dist
-  await copyFile(join(rootDir, 'README.md'), join(rootDir, 'packages/core/dist/README.md'));
-  await copyFile(join(rootDir, 'CHANGELOG.md'), join(rootDir, 'packages/core/dist/CHANGELOG.md'));
+  // Copy README.md from root to core package
+  await copyFile(join(rootDir, 'README.md'), join(rootDir, 'packages/core/README.md'));
 
   console.log('Core package built successfully!');
 }
@@ -53,6 +52,7 @@ async function buildCli() {
     outdir: join(rootDir, 'packages/cli/dist'),
     target: 'node',
     format: 'esm',
+    sourcemap: 'none',
     external: ['@btr-supply/swap'],
   });
 
@@ -63,10 +63,6 @@ async function buildCli() {
     }
     process.exit(1);
   }
-
-  // Copy documentation files
-  await copyFile(join(rootDir, 'packages/cli/README.md'), join(rootDir, 'packages/cli/dist/README.md'));
-  await copyFile(join(rootDir, 'CHANGELOG.md'), join(rootDir, 'packages/cli/dist/CHANGELOG.md'));
 
   console.log('CLI package built successfully!');
 }
