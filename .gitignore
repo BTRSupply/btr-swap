@@ -71,6 +71,7 @@ docs/_build/
 *.egg
 *.manifest
 *.spec
+*.tsbuildinfo
 
 # node / js
 node_modules
