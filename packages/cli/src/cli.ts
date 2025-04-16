@@ -31,32 +31,30 @@ import {
   ITransactionRequestWithEstimate,
 } from "@btr-supply/swap";
 
-// Try to find package.json in different potential locations
-let packageVersion = "1.28.0"; // Default hardcoded version as fallback
-try {
-  // Try different possible paths for package.json
-  const possiblePaths = [
-    path.resolve(__dirname, "../package.json"),
-    path.resolve(__dirname, "../../package.json"),
-    path.resolve(__dirname, "../../../package.json"),
-    path.resolve(process.cwd(), "package.json"),
-    path.resolve(process.cwd(), "packages/cli/package.json"),
-  ];
+const version = require(path.resolve(__dirname, "../package.json")).version;
 
-  for (const pkgPath of possiblePaths) {
-    if (fs.existsSync(pkgPath)) {
-      const packageJson = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
-      if (packageJson.name === "@btr-supply/swap-cli" && packageJson.version) {
-        packageVersion = packageJson.version;
-        break;
-      }
-    }
+// Better command name detection
+const getCommandName = () => {
+  // Try to get from the invoked command
+  const invokedCommand = process.argv[1]?.split("/").pop();
+
+  // Fall back to checking if this is run via btr-swap
+  if (process.env._ && process.env._.includes("btr-swap")) {
+    return "btr-swap";
   }
-} catch (e) {
-  // Silently continue with default version if package.json can't be read
-}
 
-const ASCII_LOGO = `
+  // If we're sure we're using btr-swap, return it
+  if (invokedCommand === "btr-swap") {
+    return "btr-swap";
+  }
+
+  // Default to swap-cli
+  return "swap-cli";
+};
+
+const commandName = getCommandName();
+
+const HELP_MESSAGE = `
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@@@@@@@/         '@@@@/            /@@@/         '@@@@@@@@
 @@@@@@@@/    /@@@    @@@@@@/    /@@@@@@@/    /@@@    @@@@@@@
@@ -64,14 +62,12 @@ const ASCII_LOGO = `
 @@@@@@/    /@@@    '@@@@@/    /@@@@@@@/    /@@    @@@@@@@@@@
 @@@@@/            ,@@@@@/    /@@@@@@@/    /@@@,    @@@@@@@@@
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-`;
 
-const HELP_MESSAGE = `${ASCII_LOGO}
-BTR Swap CLI v${packageVersion} - Get quotes from BTR Swap SDK
+BTR Swap CLI v${version} - Get quotes from Swap SDK
 
 Usage:
-  swap-cli quote [options]
-  swap-cli --version | -v
+  swap-cli quote [options]  or  btr-swap quote [options]
+  swap-cli --version | -v   or  btr-swap --version | -v
 
 Options:
   --input <token>            Required. Input token details <chainId:address:symbol:decimals>
@@ -103,7 +99,7 @@ Examples:
     --aggregators ${AggId.LIFI}
 
   # Specify Li.Fi aggregator ID and Rango API key
-  swap-cli quote \\
+  btr-swap quote \\
     --input 1:0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE:ETH:18 \\
     --output 10:0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1:DAI:18 \\
     --input-amount 5e17 \\
@@ -300,7 +296,7 @@ const runCli = async () => {
 
   // Handle version flag
   if (args.version) {
-    console.log(`BTR Swap CLI v${packageVersion}`);
+    console.log(`BTR Swap CLI v${version}`);
     process.exit(0);
   }
 

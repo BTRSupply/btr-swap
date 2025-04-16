@@ -3,7 +3,10 @@
   "version": "1.28.0",
   "type": "module",
   "main": "./dist/cli.js",
-  "bin": "./dist/cli.js",
+  "bin": {
+    "swap-cli": "./dist/cli.js",
+    "btr-swap": "./dist/cli.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/btr-supply/btr-swap.git",
