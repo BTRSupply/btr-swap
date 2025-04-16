@@ -31,11 +31,47 @@ import {
   ITransactionRequestWithEstimate,
 } from "@btr-supply/swap";
 
-const HELP_MESSAGE = `
-BTR Swap CLI - Get quotes from BTR Swap SDK
+// Try to find package.json in different potential locations
+let packageVersion = "1.28.0"; // Default hardcoded version as fallback
+try {
+  // Try different possible paths for package.json
+  const possiblePaths = [
+    path.resolve(__dirname, "../package.json"),
+    path.resolve(__dirname, "../../package.json"),
+    path.resolve(__dirname, "../../../package.json"),
+    path.resolve(process.cwd(), "package.json"),
+    path.resolve(process.cwd(), "packages/cli/package.json"),
+  ];
+
+  for (const pkgPath of possiblePaths) {
+    if (fs.existsSync(pkgPath)) {
+      const packageJson = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+      if (packageJson.name === "@btr-supply/swap-cli" && packageJson.version) {
+        packageVersion = packageJson.version;
+        break;
+      }
+    }
+  }
+} catch (e) {
+  // Silently continue with default version if package.json can't be read
+}
+
+const ASCII_LOGO = `
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@/         '@@@@/            /@@@/         '@@@@@@@@
+@@@@@@@@/    /@@@    @@@@@@/    /@@@@@@@/    /@@@    @@@@@@@
+@@@@@@@/           _@@@@@@/    /@@@@@@@/    /.     _@@@@@@@@
+@@@@@@/    /@@@    '@@@@@/    /@@@@@@@/    /@@    @@@@@@@@@@
+@@@@@/            ,@@@@@/    /@@@@@@@/    /@@@,    @@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+`;
+
+const HELP_MESSAGE = `${ASCII_LOGO}
+BTR Swap CLI v${packageVersion} - Get quotes from BTR Swap SDK
 
 Usage:
   swap-cli quote [options]
+  swap-cli --version | -v
 
 Options:
   --input <token>            Required. Input token details <chainId:address:symbol:decimals>
@@ -54,6 +90,7 @@ Options:
   --serialization <mode>     Serialization mode: ${Object.values(SerializationMode).join(",")}.
   --silent                   Optional. Suppress informational logs, only show the final output. Defaults to false.
   --env-file <path>          Path to custom .env file to load environment variables from.
+  -v, --version              Display version information.
   -h, --help                 Display this help message.
 
 Examples:
@@ -102,6 +139,7 @@ const parseArgs = (args: string[]) => {
 
   for (const arg of args) {
     if (arg === "-h") parsed.help = true;
+    else if (arg === "-v") parsed.version = true;
     else if (arg === "--silent") parsed.silent = true;
     else if (arg.startsWith("--")) currentKey = arg.slice(2);
     else if (currentKey) {
@@ -259,6 +297,13 @@ const displayOutput = (
  */
 const runCli = async () => {
   const args = parseArgs(process.argv.slice(2));
+
+  // Handle version flag
+  if (args.version) {
+    console.log(`BTR Swap CLI v${packageVersion}`);
+    process.exit(0);
+  }
+
   if (args.help || args._command !== "quote") {
     console.log(HELP_MESSAGE);
     process.exit(0);

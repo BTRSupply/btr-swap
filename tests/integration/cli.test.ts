@@ -72,6 +72,18 @@ describe("BTR Swap CLI", function() {
 
   const testOrSkip = skipReason ? test.skip : test;
 
+  testOrSkip("displays version information", () => {
+    try {
+      const command = `${baseParams.executable} --version`;
+      const output = execSync(command, { stdio: 'pipe' }).toString();
+      console.log(`Version output: ${output}`);
+      expect(output).to.include("BTR Swap CLI v").and.match(/v\d+\.\d+\.\d+/);
+    } catch (error: any) {
+      console.warn("CLI version test failed:", error);
+      throw error;
+    }
+  });
+
   testOrSkip("verbose table output (RANK+BEST_COMPACT)", () => {
     try {
       const output = runCliCommand(tableMultiRankParams, { validateWith: ["│", "Fetching quotes"], silentMode: false });
