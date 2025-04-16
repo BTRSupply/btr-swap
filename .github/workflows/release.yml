@@ -36,7 +36,11 @@ jobs:
             cd packages/$pkg
             [ -f ../../README.md ] && cp ../../README.md . || echo "# ${pkg^}" > README.md
             npm pack
-            mv btr-supply-swap${pkg/#core}-${{ steps.get_version.outputs.VERSION }}.tgz ../../
+            if [ "$pkg" = "core" ]; then
+              mv btr-supply-swap-${{ steps.get_version.outputs.VERSION }}.tgz ../../
+            else
+              mv btr-supply-swap-cli-${{ steps.get_version.outputs.VERSION }}.tgz ../../
+            fi
             rm -f README.md
             cd ../..
           done
