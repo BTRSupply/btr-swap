@@ -29,6 +29,8 @@ jobs:
         run: bun install
 
       - name: Build packages
+        env:
+          KEEP_README: "true"
         run: bun run build
 
       - name: Get version from tag
@@ -53,6 +55,8 @@ jobs:
           npm pack
           mv btr-supply-swap-cli-${{ steps.get_version.outputs.VERSION }}.tgz ../../btr-supply-swap-cli-${{ steps.get_version.outputs.VERSION }}.tgz
           cd ../.. # Return to root directory
+          # Clean up README to avoid Git conflicts
+          KEEP_README=false bun scripts/build.js cleanup
 
       - name: Create GitHub Release
         id: create_release

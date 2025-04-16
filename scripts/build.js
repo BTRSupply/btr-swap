@@ -1,81 +1,59 @@
 #!/usr/bin/env bun
-
 import dts from 'bun-plugin-dts';
 import { join, resolve } from 'node:path';
-import { copyFile, rm } from 'node:fs/promises';
+import { copyFile, rm, unlink } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 
-const rootDir = resolve('.');
+const root = resolve('.');
+const packages = {
+  core: {
+    src: pkg => `packages/${pkg}/src/index.ts`,
+    dist: pkg => `packages/${pkg}/dist`,
+    buildOptions: { target: 'bun', format: 'esm', plugins: [dts({})] }
+  },
+  cli: {
+    src: () => 'packages/cli/src/cli.ts',
+    dist: pkg => `packages/${pkg}/dist`,
+    buildOptions: { target: 'node', format: 'esm', external: ['@btr-supply/swap'] }
+  }
+};
 
-async function buildCore() {
-  console.log('Building core package...');
+const build = async pkg => {
+  console.log(`Building ${pkg}...`);
+  const { src, dist, buildOptions } = packages[pkg];
+  await rm(join(root, dist(pkg)), { recursive: true, force: true });
 
-  // Clean dist directory
-  await rm(join(rootDir, 'packages/core/dist'), { recursive: true, force: true });
-
-  // Build with declaration files
   const result = await Bun.build({
-    entrypoints: [join(rootDir, 'packages/core/src/index.ts')],
-    outdir: join(rootDir, 'packages/core/dist'),
-    target: 'bun',
-    format: 'esm',
+    entrypoints: [join(root, src(pkg))],
+    outdir: join(root, dist(pkg)),
     sourcemap: 'none',
-    plugins: [
-      dts({
-        // You can provide additional options here if needed
-      }),
-    ],
+    ...buildOptions
   });
 
   if (!result.success) {
-    console.error('Core build failed:');
-    for (const log of result.logs) {
-      console.error(log);
-    }
+    console.error(`Build failed for ${pkg}:`, ...result.logs);
     process.exit(1);
   }
+};
 
-  // Copy README.md from root to core package
-  await copyFile(join(rootDir, 'README.md'), join(rootDir, 'packages/core/README.md'));
+const readmeCopyTo = join(root, 'packages/core/README.md');
+const cleanReadme = async () =>
+  existsSync(readmeCopyTo) &&
+  (await unlink(readmeCopyTo)
+    .then(() => console.log('Cleaned core README.md'))
+    .catch(e => console.warn('Failed to clean README:', e.message)));
 
-  console.log('Core package built successfully!');
-}
-
-async function buildCli() {
-  console.log('Building CLI package...');
-
-  // Clean dist directory
-  await rm(join(rootDir, 'packages/cli/dist'), { recursive: true, force: true });
-
-  // Build CLI
-  const result = await Bun.build({
-    entrypoints: [join(rootDir, 'packages/cli/src/cli.ts')],
-    outdir: join(rootDir, 'packages/cli/dist'),
-    target: 'node',
-    format: 'esm',
-    sourcemap: 'none',
-    external: ['@btr-supply/swap'],
-  });
-
-  if (!result.success) {
-    console.error('CLI build failed:');
-    for (const log of result.logs) {
-      console.error(log);
-    }
-    process.exit(1);
-  }
-
-  console.log('CLI package built successfully!');
-}
-
-async function main() {
+if (process.argv[2] === 'cleanup') {
+  await cleanReadme().then(() => process.exit(0)).catch(() => process.exit(1));
+} else {
   try {
-    await buildCore();
-    await buildCli();
-    console.log('All packages built successfully!');
-  } catch (err) {
-    console.error('Build failed:', err);
+    await build('core');
+    await copyFile(join(root, 'README.md'), readmeCopyTo);
+    await build('cli');
+    process.env.KEEP_README !== 'true' && await cleanReadme();
+    console.log('Build complete');
+  } catch (e) {
+    console.error('Build error:', e);
     process.exit(1);
   }
 }
-
-main();
