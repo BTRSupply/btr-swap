@@ -19,12 +19,13 @@ import {
   SerializationMode,
 } from "@/types";
 import {
+  compactTr,
   getToken,
   getTrPerformanceTable,
   paramsToString,
+  serialize,
   sleep,
   toJSON,
-  trToString,
   weiToString,
 } from "@/utils";
 
@@ -243,23 +244,6 @@ export const generateFuzzCategories = async (
 };
 
 /**
- * Get transaction requests for a set of test cases
- */
-export const getTrForCases = async (
-  cases: IBtrSwapParams[],
-): Promise<(ITransactionRequestWithEstimate | undefined)[]> => {
-  const results: (ITransactionRequestWithEstimate | undefined)[] = [];
-  for (const params of cases) {
-    const trs = await getAllTimedTr(params);
-    const bestTr = trs && trs.length > 0 ? trs[0] : undefined;
-    console.log(paramsToString(params));
-    console.log(bestTr ? `  → ${trToString(bestTr)}` : "  → No quote available");
-    results.push(bestTr);
-  }
-  return results;
-};
-
-/**
  * Validates that a transaction request contains valid estimates, etc.
  */
 export function isTrValid(tr: ITransactionRequestWithEstimate): boolean {
@@ -299,7 +283,7 @@ export function assertTr(tr: ITransactionRequestWithEstimate | undefined, log = 
   // Log transaction details if requested
   if (log) {
     console.log(`>>>rfq ${paramsToString(tr.params)}`);
-    console.log(`<<<res ${trToString(tr)}`);
+    console.log(`<<<res\n${getTrPerformanceTable([tr])}`);
   }
 }
 
@@ -324,8 +308,9 @@ export async function runSwapTests(
         throw new Error(`❌ ${testInfo}: No transaction requests found`);
       }
 
-      console.log(getTrPerformanceTable(allTrs));
-      console.log(toJSON(allTrs[0]!));
+      console.log(`>>> Performance table:\n${getTrPerformanceTable(allTrs)}`);
+      console.log(`>>> Best quote JSON:\n${toJSON(allTrs[0]!)}`);
+      console.log(`>>> Best quote compact:\n${serialize(compactTr(allTrs[0]!), { mode: SerializationMode.CSV, includeHeaders: false })}`);
 
       if (validateResult) assertTr(allTrs[0], false);
       console.log(`✅ ${testInfo}`);
@@ -355,7 +340,6 @@ export const buildCliCommand = (p: IBtrSwapCliParams): string => {
     maxSlippage = MAX_SLIPPAGE_BPS,
     displayModes = [DisplayMode.RANK, DisplayMode.BEST_COMPACT],
     serializationMode = SerializationMode.JSON,
-    silent = false
   } = p;
 
   const flags = [
@@ -419,7 +403,10 @@ export function runCliCommand(
   console.log("Running command:", command);
 
   try {
-    const output = execSync(command, { maxBuffer: 1024 * 1024 * 10 }).toString();
+    const output = execSync(command, {
+      maxBuffer: 1024 * 1024 * 10, // 10MB buffer
+      timeout: 30000 // 30 second timeout
+    }).toString();
 
     if (options.validateWith?.length) {
       assert(options.validateWith.some(t => output.includes(t)),

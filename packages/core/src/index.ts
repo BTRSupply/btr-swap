@@ -23,7 +23,6 @@ import { unizenAggregator } from "@/Unizen";
 import {
   paramsToString,
   sortTrsByRate,
-  trToString,
   compactTrs,
   getTrPerformance,
   getTrPerformanceTable,
@@ -116,13 +115,6 @@ export async function getAllTimedTr(
   // Preserve original aggregator IDs
   const originalAggIds = [...o.aggIds];
   o.aggIds = originalAggIds;
-
-  console.log(
-    `${sortedTrs.length} routes found for ${paramsToString(o)} (best: ${sortedTrs[0].aggId}):\n${sortedTrs
-      .map((tr) => trToString(tr))
-      .join("\n")}`,
-  );
-
   return sortedTrs;
 }
 

@@ -4,7 +4,7 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Unit: Serialization",
+      "name": "Unit test: Serialization",
       "runtimeExecutable": "bun",
       "runtimeArgs": [
         "test",
@@ -13,15 +13,12 @@
         "tests/unit/serialization.test.ts"
       ],
       "cwd": "${workspaceFolder}",
-      "env": {
-        "DEBUG": "*"
-      },
-      "internalConsoleOptions": "openOnSessionStart"
+      "env": {},
     },
     {
       "type": "node",
       "request": "launch",
-      "name": "Integration: Simple Monochain",
+      "name": "Integration test: Simple monochain",
       "runtimeExecutable": "bun",
       "runtimeArgs": [
         "test",
@@ -30,15 +27,12 @@
         "tests/integration/simple-mono.test.ts"
       ],
       "cwd": "${workspaceFolder}",
-      "env": {
-        "DEBUG": "*"
-      },
-      "internalConsoleOptions": "openOnSessionStart"
+      "env": {},
     },
     {
       "type": "node",
       "request": "launch",
-      "name": "Integration: Fuzz",
+      "name": "Integration test: Fuzz",
       "runtimeExecutable": "bun",
       "runtimeArgs": [
         "test",
@@ -47,15 +41,12 @@
         "tests/integration/fuzz.test.ts"
       ],
       "cwd": "${workspaceFolder}",
-      "env": {
-        "DEBUG": "*"
-      },
-      "internalConsoleOptions": "openOnSessionStart"
+      "env": {},
     },
     {
       "type": "node",
       "request": "launch",
-      "name": "Core Integration Tests (Simple + Fuzz)",
+      "name": "Core integration tests (Simple + Fuzz)",
       "runtimeExecutable": "bun",
       "runtimeArgs": [
         "test",
@@ -64,15 +55,12 @@
         "tests/integration/{simple-mono,fuzz}.test.ts"
       ],
       "cwd": "${workspaceFolder}",
-      "env": {
-        "DEBUG": "*"
-      },
-      "internalConsoleOptions": "openOnSessionStart"
+      "env": {},
     },
     {
       "type": "node",
       "request": "launch",
-      "name": "Integration: CLI",
+      "name": "Integration test: CLI",
       "runtimeExecutable": "bun",
       "runtimeArgs": [
         "test",
@@ -81,10 +69,7 @@
         "tests/integration/cli.test.ts"
       ],
       "cwd": "${workspaceFolder}",
-      "env": {
-        "DEBUG": "*"
-      },
-      "internalConsoleOptions": "openOnSessionStart"
+      "env": {},
     },
     {
       "type": "node",
@@ -98,10 +83,7 @@
         "tests/{unit,integration}/*.test.ts"
       ],
       "cwd": "${workspaceFolder}",
-      "env": {
-        "DEBUG": "*"
-      },
-      "internalConsoleOptions": "openOnSessionStart"
+      "env": {},
     }
   ]
 }

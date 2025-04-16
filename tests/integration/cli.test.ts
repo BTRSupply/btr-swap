@@ -1,10 +1,9 @@
-import { expect } from "chai";
-import * as fs from "fs";
-import { beforeAll, describe, test } from "bun:test";
 import { AggId, DisplayMode, IBtrSwapCliParams, SerializationMode } from "@/types";
 import { getToken } from "@/utils";
-import { getCliExecutable, getPayer, runCliCommand } from "../utils";
+import { beforeAll, describe, test } from "bun:test";
+import { expect } from "chai";
 import { execSync } from "child_process";
+import { getCliExecutable, getPayer, runCliCommand } from "../utils";
 
 const baseParams = <IBtrSwapCliParams>{
   executable: "swap-cli",
@@ -17,7 +16,7 @@ const baseParams = <IBtrSwapCliParams>{
 
 const tableMultiRankParams = <IBtrSwapCliParams>{
   ...baseParams,
-  aggIds: [AggId.LIFI, AggId.UNIZEN, AggId.RANGO],
+  aggIds: [AggId.SOCKET, AggId.SQUID],
   displayModes: [DisplayMode.RANK, DisplayMode.BEST_COMPACT],
   serializationMode: SerializationMode.TABLE,
   silent: false
@@ -33,7 +32,6 @@ const bestCompactCsvParams = <IBtrSwapCliParams>{
 
 describe("BTR Swap CLI", function() {
   // Set up CLI tests - we'll determine if CLI is available
-  let runTests = false; // Default to not running
   let skipReason = "";
 
   beforeAll(() => {
@@ -62,24 +60,22 @@ describe("BTR Swap CLI", function() {
 
       if (isValid) {
         console.log("✅ CLI executable is operational - proceeding with tests");
-        runTests = true;
       } else {
         console.warn("❌ CLI executable help output doesn't look valid");
         skipReason = "CLI executable help output invalid";
-        runTests = false;
       }
     } catch (error: any) {
       console.warn(`❌ CLI test failed: ${error.message}`);
       skipReason = "CLI executable not operational: " + error.message;
-      runTests = false;
     }
   });
 
-  const testOrSkip = runTests ? test : test.skip;
+  const testOrSkip = skipReason ? test.skip : test;
 
   testOrSkip("verbose table output (RANK+BEST_COMPACT)", () => {
     try {
       const output = runCliCommand(tableMultiRankParams, { validateWith: ["│", "Fetching quotes"], silentMode: false });
+      console.log(output);
       expect(output).to.include("│").and.include("AGG").and.include("RATE");
     } catch (error: any) {
       console.warn("CLI test failed:", error);
@@ -100,7 +96,7 @@ describe("BTR Swap CLI", function() {
   });
 
   // If tests are being skipped, add a diagnostic test explaining why
-  if (!runTests && skipReason && skipReason.trim() !== "") {
+  if (skipReason) {
     test(`CLI tests skipped because: ${skipReason}`, () => {
       expect(true).to.be.true;
     });

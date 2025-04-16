@@ -342,7 +342,7 @@ export const toBigInt = (value: any): bigint => {
     if (typeof value === "string") return BigInt(value.trim());
     if (typeof value === "boolean") return BigInt(value ? 1 : 0);
     if (value?.toString) {
-      const str = value.toString().trim();
+      const str = value.toLocaleString("en-US", { useGrouping: false, maximumFractionDigits: 20 });
       if (str && !isNaN(Number(str))) return BigInt(str);
     }
   } catch (e) {
@@ -609,26 +609,6 @@ export function paramsToString(o: IBtrSwapParams, callData?: string): string {
 }
 
 /**
- * Converts a transaction request with estimate into a human-readable string for logging/debugging.
- * @param tr - The transaction request with estimate object
- * @returns A formatted string summarizing the transaction details
- */
-export function trToString(tr: ITransactionRequestWithEstimate): string {
-  if (!tr) return "Empty transaction request";
-
-  const lastStep = tr.steps?.[tr.steps.length - 1];
-  const output = lastStep?.output;
-  const outputAmount = lastStep?.estimates?.output || "0";
-  const exchangeRate = lastStep?.estimates?.exchangeRate || 0;
-
-  return `[${tr.aggId || "???"}] router: ${shortenAddress(tr.to || "???")} → ${outputAmount} ${output?.symbol || "???"} ${output?.address || "???"} | Rate: ${Number(exchangeRate).toFixed(6)} | Gas: $${
-    lastStep?.estimates?.gasCostUsd?.toFixed(3) || "0"
-  } | Fee: $${lastStep?.estimates?.feeCostUsd?.toFixed(3) || "0"}${
-    tr.steps?.length ? ` | Steps: ${tr.steps.length}` : ""
-  }`;
-}
-
-/**
  * Combines transaction data with swap parameters and estimates to create final request object.
  * @param o - Partial transaction request with estimate
  * @returns Complete transaction request with populated estimates
@@ -695,7 +675,7 @@ export const validateParams = (o: IBtrSwapParams): boolean => {
     (o.output.chainId === undefined || Number(o.output.chainId) > 0);
 
   try {
-    return validAddresses && validChainIds && BigInt(o.inputAmountWei?.toString() || 0) > 0n;
+    return validAddresses && validChainIds && toBigInt(o.inputAmountWei) > 0n;
   } catch {
     return false;
   }
