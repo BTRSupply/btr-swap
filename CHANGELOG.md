@@ -5,6 +5,19 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
+## [1.30.0] - 2025-04-16
+
+### Fixes
+
+- [fix] Changelog duplicates
+
+### Ops
+
+- [ops] Extract cleanup functionality to dedicated script
+- [ops] Fix package build process: Use main README in core package, remove sourcemaps
+- [ops] Remove conditional README retention logic
+- [ops] Simplify build and cleanup process
+
 ## [1.29.0] - 2025-04-16
 
 ### Features
