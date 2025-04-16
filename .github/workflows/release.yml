@@ -97,8 +97,3 @@ jobs:
         run: |
           cd packages/${{ matrix.package.path }}
           npm publish --access public $([[ "${{ steps.check_tags.outputs.pre }}" == 'true' ]] && echo "--tag next")
-      - uses: actions/upload-artifact@v4
-        with:
-          name: built-packages
-          path: packages
-      - run: bun scripts/cleanup.js
