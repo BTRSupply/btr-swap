@@ -5,6 +5,25 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
+## [1.28.0] - 2025-04-16
+
+### Fixes
+
+- [fix] Add @types/node dependency
+- [fix] Correct buildCliCommand to only add --silent flag when specified
+- [fix] Fix types in types.ts to match implementation
+
+### Refactors
+
+- [refac] Optimize CLI tests for conciseness and readability
+- [refac] Optimize CLI tests with graceful error handling
+- [refac] Optimize code and improve test output formatting
+- [refac] Refine CLI test skipping logic
+
+### Ops
+
+- [ops] Exclude all tsbuildinfo files in gitignore
+
 ## [1.27.0] - 2025-04-15
 
 ### Fixes
