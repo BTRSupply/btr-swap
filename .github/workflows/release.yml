@@ -15,78 +15,45 @@ jobs:
     outputs:
       version: ${{ steps.get_version.outputs.VERSION }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Build packages
-        run: bun run build
-
-      - name: Get version from tag
-        id: get_version
+      - run: bun install
+      - run: bun run build
+      - id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
-      - name: Set package versions to tag version
-        run: bun run scripts/release.js ${{ steps.get_version.outputs.VERSION }}
-
-      - name: Extract release notes
+      - run: bun run scripts/release.js ${{ steps.get_version.outputs.VERSION }}
+      - uses: ffurrer2/extract-release-notes@v1
         id: extract_release_notes
-        uses: ffurrer2/extract-release-notes@v1
         with:
           changelog_file: CHANGELOG.md
-
-      - name: Pack npm packages for release assets
+      - name: Pack packages
         run: |
-          # Core package
-          cd packages/core
-          # Ensure README exists for package
-          cp ../../README.md ./README.md
-          npm pack
-          mv btr-supply-swap-${{ steps.get_version.outputs.VERSION }}.tgz ../../btr-supply-swap-${{ steps.get_version.outputs.VERSION }}.tgz
-
-          # CLI package
-          cd ../cli
-          npm pack
-          mv btr-supply-swap-cli-${{ steps.get_version.outputs.VERSION }}.tgz ../../btr-supply-swap-cli-${{ steps.get_version.outputs.VERSION }}.tgz
-
-          # Clean up README after packaging
-          rm -f ./README.md
-
-          # Return to root
-          cd ../..
-
-      - name: Create GitHub Release
+          for pkg in core cli; do
+            cd packages/$pkg
+            [ -f ../../README.md ] && cp ../../README.md . || echo "# ${pkg^}" > README.md
+            npm pack
+            mv btr-supply-swap${pkg/#core}-${{ steps.get_version.outputs.VERSION }}.tgz ../../
+            rm -f README.md
+            cd ../..
+          done
+      - uses: softprops/action-gh-release@v1
         id: create_release
-        uses: softprops/action-gh-release@v1
         with:
           name: Release v${{ steps.get_version.outputs.VERSION }}
-          draft: false
-          prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
           body: ${{ steps.extract_release_notes.outputs.release_notes }}
           files: |
             btr-supply-swap-${{ steps.get_version.outputs.VERSION }}.tgz
             btr-supply-swap-cli-${{ steps.get_version.outputs.VERSION }}.tgz
-
-      # Upload artifacts for publish jobs to use
-      - name: Upload built packages
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: built-packages
           path: packages/
-
-      # Clean up README after artifacts are saved
-      - name: Clean up temporary files
-        run: bun scripts/cleanup.js
+      - run: bun scripts/cleanup.js
 
   publish:
     needs: build
@@ -95,10 +62,10 @@ jobs:
       matrix:
         registry:
           - name: npmjs
-            url: https://registry.npmjs.org
+            url: "https://registry.npmjs.org"
             token: NPM_TOKEN
           - name: github
-            url: https://npm.pkg.github.com
+            url: "https://npm.pkg.github.com"
             token: GITHUB_TOKEN
             scope: btr-supply
         package:
@@ -107,38 +74,29 @@ jobs:
           - path: cli
             name: swap-cli
     steps:
-      - name: Download built packages
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: built-packages
-          path: packages/
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+          path: packages
+      - uses: actions/setup-node@v4
         env:
           NODE_AUTH_TOKEN: ${{ secrets[matrix.registry.token] }}
         with:
           node-version: "20"
           registry-url: ${{ matrix.registry.url }}
           scope: ${{ matrix.registry.scope }}
-
-      - name: Publish ${{ matrix.package.name }} to ${{ matrix.registry.name }}
-        working-directory: ./packages/${{ matrix.package.path }}
+      - id: check_tags
+        run: echo "pre=$([[ $GITHUB_REF == *"-"* ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+      - name: Publish package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets[matrix.registry.token] }}
         run: |
-          echo "--- Publishing --- ${{ matrix.package.name }} to ${{ matrix.registry.name }} ---"
-          if [[ "${{ matrix.package.name }}" == "swap-cli" ]]; then
-            sleep 5
-          fi
-          # For core package, copy the README before publishing
-          if [[ "${{ matrix.package.name }}" == "swap" ]]; then
-            cp ../../README.md ./README.md
-          fi
-          npm publish --access public
-          # Clean up README after publishing
-          rm -f ./README.md
-
-      # - name: Verify npm publication
-      #   if: ${{ matrix.registry.name == 'npmjs' && matrix.package.name == 'swap-cli' }}
-      #   run: |
-      #     sleep 10
-      #     npm view @btr-supply/${{ matrix.package.name }}@${{ needs.build.outputs.version }} --registry=${{ matrix.registry.url }}
+          cd packages/${{ matrix.package.path }}
+          [ -f ../../README.md ] && cp ../../README.md . || echo "# @btr-supply/${{ matrix.package.name }}" > README.md
+          npm publish --access public $([[ "${{ steps.check_tags.outputs.pre }}" == 'true' ]] && echo "--tag next")
+          rm -f README.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: built-packages
+          path: packages
+      - run: bun scripts/cleanup.js
