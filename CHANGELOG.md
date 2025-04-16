@@ -5,6 +5,13 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
+## [1.31.0] - 2025-04-16
+
+### Ops
+
+- [ops] Add README cleanup steps to publishing workflow
+- [ops] Fix NPM publishing workflow to include README
+
 ## [1.30.0] - 2025-04-16
 
 ### Fixes
