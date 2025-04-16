@@ -58,6 +58,9 @@ jobs:
           npm pack
           mv btr-supply-swap-cli-${{ steps.get_version.outputs.VERSION }}.tgz ../../btr-supply-swap-cli-${{ steps.get_version.outputs.VERSION }}.tgz
 
+          # Clean up README after packaging
+          rm -f ./README.md
+
           # Return to root
           cd ../..
 
@@ -131,6 +134,8 @@ jobs:
             cp ../../README.md ./README.md
           fi
           npm publish --access public
+          # Clean up README after publishing
+          rm -f ./README.md
 
       # - name: Verify npm publication
       #   if: ${{ matrix.registry.name == 'npmjs' && matrix.package.name == 'swap-cli' }}
