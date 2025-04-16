@@ -33,27 +33,6 @@ import {
 
 const version = require(path.resolve(__dirname, "../package.json")).version;
 
-// Better command name detection
-const getCommandName = () => {
-  // Try to get from the invoked command
-  const invokedCommand = process.argv[1]?.split("/").pop();
-
-  // Fall back to checking if this is run via btr-swap
-  if (process.env._ && process.env._.includes("btr-swap")) {
-    return "btr-swap";
-  }
-
-  // If we're sure we're using btr-swap, return it
-  if (invokedCommand === "btr-swap") {
-    return "btr-swap";
-  }
-
-  // Default to swap-cli
-  return "swap-cli";
-};
-
-const commandName = getCommandName();
-
 const HELP_MESSAGE = `
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 @@@@@@@@@/         '@@@@/            /@@@/         '@@@@@@@@
