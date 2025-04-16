@@ -46,15 +46,20 @@ jobs:
 
       - name: Pack npm packages for release assets
         run: |
+          # Core package
           cd packages/core
+          # Ensure README exists for package
+          cp ../../README.md ./README.md
           npm pack
           mv btr-supply-swap-${{ steps.get_version.outputs.VERSION }}.tgz ../../btr-supply-swap-${{ steps.get_version.outputs.VERSION }}.tgz
+
+          # CLI package
           cd ../cli
           npm pack
           mv btr-supply-swap-cli-${{ steps.get_version.outputs.VERSION }}.tgz ../../btr-supply-swap-cli-${{ steps.get_version.outputs.VERSION }}.tgz
-          cd ../.. # Return to root directory
-          # Clean up README to avoid Git conflicts
-          bun scripts/cleanup.js
+
+          # Return to root
+          cd ../..
 
       - name: Create GitHub Release
         id: create_release
@@ -75,6 +80,10 @@ jobs:
         with:
           name: built-packages
           path: packages/
+
+      # Clean up README after artifacts are saved
+      - name: Clean up temporary files
+        run: bun scripts/cleanup.js
 
   publish:
     needs: build
@@ -116,6 +125,10 @@ jobs:
           echo "--- Publishing --- ${{ matrix.package.name }} to ${{ matrix.registry.name }} ---"
           if [[ "${{ matrix.package.name }}" == "swap-cli" ]]; then
             sleep 5
+          fi
+          # For core package, copy the README before publishing
+          if [[ "${{ matrix.package.name }}" == "swap" ]]; then
+            cp ../../README.md ./README.md
           fi
           npm publish --access public
 
