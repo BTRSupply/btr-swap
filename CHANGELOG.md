@@ -44,17 +44,6 @@ NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
 ### Fixes
 
-- [fix] Add @types/node dependency
-- [fix] Fix types in types.ts to match implementation
-
-### Refactors
-
-- [refac] Optimize CLI tests for conciseness and readability
-
-## [1.27.0] - 2025-04-15
-
-### Fixes
-
 - [fix] Added 'git add -u' after 'lint:fix' in 'pre-commit' to stage fixed already-tracked files
 - [fix] Added dev/main to 'post-checkout' hook exclusion (glitchy name check)
 - [fix] Added git add on pre-commit post-fix
