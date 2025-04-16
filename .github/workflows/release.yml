@@ -56,7 +56,7 @@ jobs:
           mv btr-supply-swap-cli-${{ steps.get_version.outputs.VERSION }}.tgz ../../btr-supply-swap-cli-${{ steps.get_version.outputs.VERSION }}.tgz
           cd ../.. # Return to root directory
           # Clean up README to avoid Git conflicts
-          KEEP_README=false bun scripts/build.js cleanup
+          bun scripts/cleanup.js
 
       - name: Create GitHub Release
         id: create_release

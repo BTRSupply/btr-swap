@@ -1,8 +1,7 @@
 #!/usr/bin/env bun
 import dts from 'bun-plugin-dts';
 import { join, resolve } from 'node:path';
-import { copyFile, rm, unlink } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { copyFile, rm } from 'node:fs/promises';
 
 const root = resolve('.');
 const packages = {
@@ -37,23 +36,13 @@ const build = async pkg => {
 };
 
 const readmeCopyTo = join(root, 'packages/core/README.md');
-const cleanReadme = async () =>
-  existsSync(readmeCopyTo) &&
-  (await unlink(readmeCopyTo)
-    .then(() => console.log('Cleaned core README.md'))
-    .catch(e => console.warn('Failed to clean README:', e.message)));
 
-if (process.argv[2] === 'cleanup') {
-  await cleanReadme().then(() => process.exit(0)).catch(() => process.exit(1));
-} else {
-  try {
-    await build('core');
-    await copyFile(join(root, 'README.md'), readmeCopyTo);
-    await build('cli');
-    process.env.KEEP_README !== 'true' && await cleanReadme();
-    console.log('Build complete');
-  } catch (e) {
-    console.error('Build error:', e);
-    process.exit(1);
-  }
+try {
+  await build('core');
+  await copyFile(join(root, 'README.md'), readmeCopyTo);
+  await build('cli');
+  console.log('Build complete');
+} catch (e) {
+  console.error('Build error:', e);
+  process.exit(1);
 }

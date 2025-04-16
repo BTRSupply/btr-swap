@@ -116,17 +116,11 @@ writeFileSync(LOG, log.includes('## [')
   : log + entry
 );
 
-// Run build script with README preservation flag
 try {
-  process.env.KEEP_README = 'true';
-  execSync('bun run build', { stdio: 'inherit' });
-
-  // Clean up the README after the version update is complete
-  setTimeout(() => {
-    execSync('bun scripts/build.js cleanup', { stdio: 'inherit' });
-  }, 1000); // Small delay to ensure any file operations have completed
+  execSync('bun run build', { stdio: 'inherit', env: { ...process.env, KEEP_README: 'true' } });
+  execSync('bun scripts/cleanup.js', { stdio: 'inherit' });
 } catch (e) {
-  console.warn('Warning: Build error:', e.message);
+  console.warn(`Build error: ${e.message}`);
 }
 
 console.log(newVer);
