@@ -96,9 +96,20 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets[matrix.registry.token] }}
         run: |
           cd packages/${{ matrix.package.path }}
-          [ -f ../../README.md ] && cp ../../README.md . || echo "# @btr-supply/${{ matrix.package.name }}" > README.md
+          # Create a minimal README if none exists
+          if [ ! -f "README.md" ]; then
+            echo "# @btr-supply/${{ matrix.package.name }}" > README.md
+            echo "" >> README.md
+            echo "Part of the BTR Swap ecosystem - see https://github.com/btr-supply/btr-swap for full documentation" >> README.md
+            CLEANUP_README=true
+          fi
+
           npm publish --access public $([[ "${{ steps.check_tags.outputs.pre }}" == 'true' ]] && echo "--tag next")
-          rm -f README.md
+
+          # Only remove README if we created it
+          if [ "$CLEANUP_README" = "true" ]; then
+            rm -f README.md
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: built-packages
