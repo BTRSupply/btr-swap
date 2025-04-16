@@ -5,6 +5,17 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
+## [1.33.0] - 2025-04-16
+
+### Fixes
+
+- [fix] Fix tarball naming pattern in release workflow
+- [fix] Improve README handling in release workflow
+
+### Refactors
+
+- [refac] Simplify publish step in release workflow
+
 ## [1.32.0] - 2025-04-16
 
 ### Ops
