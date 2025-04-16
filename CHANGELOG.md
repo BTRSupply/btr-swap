@@ -5,6 +5,12 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
+## [1.34.0] - 2025-04-16
+
+### Ops
+
+- [ops] Remove redundant artifact uploads from release workflow
+
 ## [1.33.0] - 2025-04-16
 
 ### Fixes
