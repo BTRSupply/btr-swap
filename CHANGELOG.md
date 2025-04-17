@@ -5,6 +5,12 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
+## [1.35.0] - 2025-04-17
+
+### Fixes
+
+- [fix] Ensure README is included in npm package and cleaned up
+
 ## [1.34.0] - 2025-04-16
 
 ### Ops
