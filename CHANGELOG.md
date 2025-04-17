@@ -5,6 +5,12 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
+## [1.37.0] - 2025-04-17
+
+### Fixes
+
+- [fix] Correctly resolve package.json path in CLI for runtime
+
 ## [1.36.0] - 2025-04-17
 
 ### Ops
