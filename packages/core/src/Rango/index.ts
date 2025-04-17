@@ -325,6 +325,10 @@ export class Rango extends BaseAggregator {
         data: swapResponse.tx.txData,
         value: swapResponse.tx.value ? BigInt(swapResponse.tx.value) : 0n,
         from: p.payer,
+        approveTo:
+          swapResponse.tx.approveTo ||
+          this.getApprovalAddress(p.input.chainId) ||
+          swapResponse.tx.txTo,
         // Ensure chainId is number | undefined for TransactionRequest type
         chainId: Number(p.input.chainId),
         aggId: this.id,

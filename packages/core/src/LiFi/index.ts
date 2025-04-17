@@ -211,10 +211,7 @@ export class LiFi extends BaseAggregator {
           outputWei: step.estimate.toAmount,
           exchangeRate: outputAmount / inputAmount,
           slippage: step.action.slippage || 0,
-          gasCostUsd: this.sumCosts(step.estimate.gasCosts, "amountUSD") as number,
-          gasCostWei: this.sumCosts(step.estimate.gasCosts, "amount") as bigint,
-          feeCostUsd: this.sumCosts(step.estimate.feeCosts, "amountUSD") as number,
-          feeCostWei: this.sumCosts(step.estimate.feeCosts, "amount") as bigint,
+          ...this.processCostEstimate(step.estimate.gasCosts, step.estimate.feeCosts),
         },
       };
     });
@@ -234,6 +231,7 @@ export class LiFi extends BaseAggregator {
     includedSteps: ILifiSwapStep[] = [step],
   ): ITransactionRequestWithEstimate => {
     if (!tx.to || !tx.data) throw new Error("Incomplete transaction request");
+    tx.approveTo ||= this.getApprovalAddress(step.action.fromChainId) || tx.to;
 
     const steps = this.parseSteps(includedSteps);
     const firstStep = steps[0];
@@ -319,7 +317,7 @@ export class LiFi extends BaseAggregator {
       }
 
       return this.processTransactionRequest(
-        quote.transactionRequest,
+        { ...quote.transactionRequest, approveTo: quote.estimate.approvalAddress },
         quote,
         quote.includedSteps || [quote],
       );

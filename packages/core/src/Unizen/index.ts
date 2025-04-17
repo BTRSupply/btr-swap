@@ -17,6 +17,7 @@ import {
   ITransactionRequestWithEstimate,
   ProtocolType,
   StepType,
+  TransactionRequest,
 } from "@/types";
 import {
   addEstimatesToTr,
@@ -337,11 +338,7 @@ export class Unizen extends BaseAggregator {
       }
 
       const isCrossChain = this.isCrossChainQuote(quote);
-      let transactionDetails: {
-        target: string | undefined;
-        data: string | undefined;
-        value: bigint;
-      };
+      let tr: TransactionRequest;
 
       if (isCrossChain) {
         const data = quote.transactionData;
@@ -352,24 +349,25 @@ export class Unizen extends BaseAggregator {
             quote,
           );
         }
-        transactionDetails = {
-          target: data.srcCalls[0].targetExchange,
+        tr = {
+          to: data.srcCalls[0].targetExchange,
           data: data.srcCalls[0].data,
           value: quote.nativeValue ? BigInt(quote.nativeValue) : BigInt(0),
+          approveTo: data.srcCalls[0].targetExchange,
         };
       } else {
         const data = quote.transactionData;
         if (!data?.call?.[0]) {
           throw formatError("Invalid transaction data from Unizen single-chain quote", 400, quote);
         }
-        transactionDetails = {
-          target: data.call[0].targetExchange,
+        tr = {
+          to: data.call[0].targetExchange,
           data: data.call[0].data,
           value: quote.nativeValue ? BigInt(quote.nativeValue) : BigInt(0),
         };
       }
 
-      if (!transactionDetails.target || !transactionDetails.data) {
+      if (!tr.to || !tr.data) {
         throw formatError("Missing target or data in transaction details", 400, quote);
       }
 
@@ -395,9 +393,7 @@ export class Unizen extends BaseAggregator {
           ];
 
       return addEstimatesToTr({
-        to: transactionDetails.target,
-        data: transactionDetails.data,
-        value: transactionDetails.value,
+        ...tr,
         from: p.payer,
         chainId: Number(p.input.chainId),
         params: p,

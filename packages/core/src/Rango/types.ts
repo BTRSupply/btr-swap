@@ -94,8 +94,9 @@ export interface IRangoTxData {
   value: string | null;
   gasLimit: string | null;
   gasPrice: string | null;
-  // NB: Other fields like 'from', 'blockChain', 'sendsFromAddress', 'approvalData'
-  // are often redundant or handled elsewhere in our integration.
+  approveTo?: string;
+  approveData?: string;
+  isApprovalTx?: boolean;
 }
 
 /** Structure for the route details within the Rango API response. */

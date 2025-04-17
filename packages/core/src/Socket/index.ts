@@ -290,6 +290,10 @@ export class Socket extends BaseAggregator {
         data: swapData.txData,
         value: swapData.value ? BigInt(swapData.value) : 0n,
         from: p.payer,
+        approveTo:
+          swapData.approvalData?.allowanceTarget ||
+          this.getApprovalAddress(p.input.chainId) ||
+          swapData.txTarget,
         chainId: Number(p.input.chainId),
         params: p,
         steps,

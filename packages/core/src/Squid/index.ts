@@ -309,12 +309,12 @@ export class Squid extends BaseAggregator {
         ...steps[0].estimates,
         ...this.calculateCosts(quote.route.estimate),
       };
+      tr.to ||= tr.targetAddress || tr.target; // squid v1 polyfill
+      tr.value ||= 0n;
+      tr.approveTo ||= this.getApprovalAddress(p.input.chainId) || tr.to;
 
       return addEstimatesToTr({
         ...tr,
-        to: tr.to ?? tr.target ?? tr.targetAddress, // squid v1 polyfill
-        data: tr.data,
-        value: tr.value ? BigInt(tr.value.toString()) : 0n,
         gasLimit: tr.gasLimit ? BigInt(tr.gasLimit.toString()) : undefined,
         from: p.payer,
         chainId: Number(p.input.chainId),

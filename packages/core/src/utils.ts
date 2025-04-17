@@ -526,11 +526,12 @@ export async function fetchJson<T = unknown>(
   url: string | URL,
   options?: FetchOptions,
   method?: string,
+  silent = true,
 ): Promise<T> {
   const effectiveMethod = method ?? options?.method ?? "GET";
 
   try {
-    console.debug(`>>>req [${effectiveMethod}] ${url}`);
+    if (!silent) console.log(`>>>req [${effectiveMethod}] ${url}`);
     const response = await fetch(url, { ...options, method: effectiveMethod });
 
     if (!response.ok) {
