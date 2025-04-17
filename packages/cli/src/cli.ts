@@ -116,19 +116,74 @@ const handleError = (message: string, details?: any): never => {
  */
 const parseArgs = (args: string[]) => {
   const parsed: Record<string, string | string[] | boolean> = {};
-  const multiValue = new Set(["aggregators", "display"]);
-  let currentKey: string | null = null;
+  const multiValueArgs = new Set(["aggregators", "display"]);
+  const booleanFlags = new Set(["silent", "help", "version"]);
+  const validLongArgs = new Set([
+    "input",
+    "input-amount",
+    "output",
+    "payer",
+    "receiver",
+    "max-slippage",
+    "aggregators",
+    "api-keys",
+    "referrer-codes",
+    "integrator-ids",
+    "fees-bps",
+    "display",
+    "serialization",
+    "env-file",
+    // Boolean flags also included here for completeness
+    "silent",
+    "help",
+    "version",
+  ]);
 
-  for (const arg of args) {
-    if (arg === "-h") parsed.help = true;
-    else if (arg === "-v") parsed.version = true;
-    else if (arg === "--silent") parsed.silent = true;
-    else if (arg.startsWith("--")) currentKey = arg.slice(2);
-    else if (currentKey) {
-      parsed[currentKey] = multiValue.has(currentKey) ? arg.split(",").map((v) => v.trim()) : arg;
-      currentKey = null;
-    } else if (!parsed._command) parsed._command = arg;
+  let i = 0;
+  while (i < args.length) {
+    const arg = args[i];
+
+    if (!parsed._command && arg !== "-h" && arg !== "-v" && !arg.startsWith("--")) {
+      if (arg === "quote") {
+        parsed._command = arg;
+        i++;
+      } else {
+        handleError(`Unrecognized command or argument: ${arg}`, HELP_MESSAGE);
+      }
+    } else if (arg === "-h" || arg === "--help") {
+      parsed.help = true;
+      i++;
+    } else if (arg === "-v" || arg === "--version") {
+      parsed.version = true;
+      i++;
+    } else if (arg === "--silent") {
+      parsed.silent = true;
+      i++;
+    } else if (arg.startsWith("--")) {
+      const key = arg.slice(2);
+      if (!validLongArgs.has(key)) {
+        handleError(`Unrecognized argument: --${key}`, HELP_MESSAGE);
+      }
+
+      if (booleanFlags.has(key)) {
+        // Should not happen based on current setup (--silent, --help, --version are handled above)
+        // but good for future proofing if other boolean flags are added.
+        parsed[key] = true;
+        i++;
+      } else if (i + 1 >= args.length || args[i + 1].startsWith("-")) {
+        // Value is missing or the next arg is another option
+        handleError(`Missing value for argument: --${key}`, HELP_MESSAGE);
+      } else {
+        const value = args[i + 1];
+        parsed[key] = multiValueArgs.has(key) ? value.split(",").map((v) => v.trim()) : value;
+        i += 2; // Consumed both key and value
+      }
+    } else {
+      // Argument appeared unexpectedly (e.g., after command and flags)
+      handleError(`Unexpected argument: ${arg}`, HELP_MESSAGE);
+    }
   }
+
   return parsed;
 };
 
