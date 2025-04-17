@@ -32,16 +32,14 @@ jobs:
           changelog_file: CHANGELOG.md
       - name: Pack packages
         run: |
-          for pkg in core cli; do
-            cd packages/$pkg
-            [ -f ../../README.md ] && cp ../../README.md . || echo "# ${pkg^}" > README.md
-            npm pack
-            if [ "$pkg" = "core" ]; then
-              mv btr-swap-${{ steps.get_version.outputs.VERSION }}.tgz ../../
-            else
-              mv btr-swap-cli-${{ steps.get_version.outputs.VERSION }}.tgz ../../
-            fi
-            cd ../..
+          VERSION=${{ steps.get_version.outputs.VERSION }}
+          for pkg in core cli; do \
+            ( \
+              cd packages/$pkg && \
+              [ "$pkg" = "core" ] && [ -f ../../README.md ] && cp ../../README.md . ; \
+              npm pack --quiet && \
+              if [ "$pkg" = "core" ]; then mv "btr-supply-swap-$VERSION.tgz" ../..; else mv "btr-supply-swap-cli-$VERSION.tgz" ../..; fi \
+            ) ; \
           done
       - uses: softprops/action-gh-release@v1
         id: create_release
@@ -50,8 +48,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: ${{ steps.extract_release_notes.outputs.release_notes }}
           files: |
-            btr-swap-${{ steps.get_version.outputs.VERSION }}.tgz
-            btr-swap-cli-${{ steps.get_version.outputs.VERSION }}.tgz
+            btr-supply-swap-${{ steps.get_version.outputs.VERSION }}.tgz
+            btr-supply-swap-cli-${{ steps.get_version.outputs.VERSION }}.tgz
       - uses: actions/upload-artifact@v4
         with:
           name: built-packages
@@ -96,5 +94,3 @@ jobs:
         run: |
           cd packages/${{ matrix.package.path }}
           npm publish --access public $([[ "${{ steps.check_tags.outputs.pre }}" == 'true' ]] && echo "--tag next")
-          # Clean up the copied README if it exists (only relevant for core package)
-          [ -f README.md ] && rm -f README.md
