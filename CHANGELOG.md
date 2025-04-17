@@ -5,6 +5,16 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
+## [1.38.0] - 2025-04-17
+
+### Features
+
+- [feat] Add approveTo and refactor cost/tx handling in aggregators
+
+### Ops
+
+- [ops] Add top-level publish script
+
 ## [1.37.0] - 2025-04-17
 
 ### Fixes
