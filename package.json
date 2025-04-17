@@ -31,10 +31,11 @@
     "validate:commit-msg": "bun ./scripts/check-name.js --check-commit",
     "validate:branch-name": "bun ./scripts/check-name.js --check-branch",
     "validate:pre-push": "bun ./scripts/check-name.js --check-push",
-    "pre-commit": "bun run lint:fix && git add -u && bun run build && bun run typecheck && bun run test:unit",
+    "pre-commit": "bunx lint-staged && bun run build && bun run typecheck && bun run test:unit",
     "commit:version": "VERSION=$(node -p \"require('./package.json').version\") && git add . && git commit -m \"[ops] Bump version to v$VERSION\"",
     "release": "bun run scripts/release.js $BUMP_TYPE",
     "push-tag": "VERSION=$(node -p \"require('./package.json').version\") && git tag -a v$VERSION -m \"Release v$VERSION: @btr-supply/swap and @btr-supply/swap-cli\" && git push origin v$VERSION",
+    "publish": "bun run publish:minor",
     "publish:patch": "bun scripts/check-branch.js main && BUMP_TYPE=patch bun run release && bun run commit:version && bun run push-tag",
     "publish:minor": "bun scripts/check-branch.js main && BUMP_TYPE=minor bun run release && bun run commit:version && bun run push-tag",
     "publish:major": "bun scripts/check-branch.js main && BUMP_TYPE=major bun run release && bun run commit:version && bun run push-tag",
@@ -44,18 +45,22 @@
   },
   "devDependencies": {
     "@types/bun": "^1.2.9",
-    "@types/node": "^22.14.0",
+    "@types/node": "^22.14.1",
     "bun-plugin-dts": "^0.3.0",
     "husky": "^9.1.7",
-    "lint-staged": "^15.5.0",
-    "oxlint": "^0.16.5",
+    "lint-staged": "^15.5.1",
+    "oxlint": "^0.16.6",
     "prettier": "^3.5.3",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.5.4"
+    "typescript": "^5.8.3"
   },
   "lint-staged": {
-    "*.{js,ts}": [
+    "*.{ts,js}": [
+      "bun run format:fix",
       "oxlint --fix"
+    ],
+    "*.{json,md}": [
+      "bun run format:fix"
     ]
   }
 }
