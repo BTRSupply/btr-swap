@@ -12,6 +12,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import { config as loadDotenv } from "dotenv";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
 
 // Import from the core package
 import {
@@ -31,7 +33,12 @@ import {
   ITransactionRequestWithEstimate,
 } from "@btr-supply/swap";
 
-const version = require(path.resolve(__dirname, "../package.json")).version;
+// Determine version dynamically using import.meta.url
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const packageJsonPath = path.resolve(__dirname, "../package.json");
+const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+const version = packageJson.version;
 
 const HELP_MESSAGE = `
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

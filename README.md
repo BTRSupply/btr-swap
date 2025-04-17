@@ -5,11 +5,11 @@
     <strong>Cross-chain swap aggregation SDK</strong>
   </p>
   <p>
-    <a href="https://www.npmjs.com/package/@btr-supply/swap"><img alt="NPM Package" src="https://img.shields.io/npm/v/@btr-supply/swap.svg?style=flat-square&logo=npm&logoColor=white&labelColor=d42b26&color=black" width="auto" height="22" style="border-radius:6px; border:1px solid #eee;"/></a>
-    <!-- <a href="https://btr.supply/docs"><img alt="Docs" src="https://img.shields.io/badge/Docs-212121?style=flat-square&logo=readthedocs&logoColor=white" width="auto" height="22" style="border-radius:6px; border:1px solid #eee;"/></a> -->
-    <a href="https://opensource.org/licenses/MIT"><img alt="License" src="https://img.shields.io/badge/license-MIT-000000?style=flat-square&logo=open-source-initiative&logoColor=white&labelColor=4c9c3d" width="auto" height="22" style="border-radius:6px; border:1px solid #eee;"/></a>
-    <a href="https://t.me/BTRSupply"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-24b3e3?style=flat-square&logo=telegram&logoColor=white" width="auto" height="22" style="border-radius:6px; border:1px solid #eee;"/></a>
-    <a href="https://twitter.com/BTRSupply"><img alt="X (Twitter)" src="https://img.shields.io/badge/@BTRSupply-000000?style=flat-square&logo=x&logoColor=white" width="auto" height="22" style="border-radius:6px; border:1px solid #eee;"/></a>
+    <a href="https://www.npmjs.com/package/@btr-supply/swap"><img alt="NPM Package" src="https://img.shields.io/npm/v/@btr-supply/swap.svg?style=flat-square&logo=npm&logoColor=white&labelColor=d42b26&color=black" width="auto"/></a>
+    <!-- <a href="https://btr.supply/docs"><img alt="Docs" src="https://img.shields.io/badge/Docs-212121?style=flat-square&logo=readthedocs&logoColor=white" width="auto"/></a> -->
+    <a href="https://opensource.org/licenses/MIT"><img alt="License" src="https://img.shields.io/badge/license-MIT-000000?style=flat-square&logo=open-source-initiative&logoColor=white&labelColor=4c9c3d" width="auto"/></a>
+    <a href="https://t.me/BTRSupply"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-24b3e3?style=flat-square&logo=telegram&logoColor=white" width="auto"/></a>
+    <a href="https://twitter.com/BTRSupply"><img alt="X (Twitter)" src="https://img.shields.io/badge/@BTRSupply-000000?style=flat-square&logo=x&logoColor=white" width="auto"/></a>
     </p>
 </div>
 
@@ -22,10 +22,10 @@ BTR Swap is a liquidity meta-aggregator powering monochain and cross-chain swaps
 
 ## ⚠️ Disclaimer
 
-This aggregator is under active development and not a commercial product.
-BTR and its team members are not liable for any losses from using this codebase. The code is provided as-is and underlying APIs may change.
+This aggregator is under active development and provided "as-is". Underlying API changes may not be immediately reflected in the repository.
+BTR team members are not liable for financial losses incurred from using this codebase.
 
-We welcome issues for bugs or feature requests, and pull requests to improve the package.
+We welcome issues for bugs or feature requests, and pull requests to improve the package. See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Features
 
