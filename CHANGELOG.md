@@ -5,6 +5,12 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
+## [1.36.0] - 2025-04-17
+
+### Ops
+
+- [ops] Refactor and fix package packing step in release workflow
+
 ## [1.35.0] - 2025-04-17
 
 ### Fixes
