@@ -1,7 +1,9 @@
 {
-  "name": "btr-swap-monorepo",
+  "name": "btr-swap",
   "version": "1.38.0",
-  "private": true,
+  "author": "BTR Supply <contact@btr.supply>",
+  "license": "MIT",
+  "description": "Generic Bridge+Swap aggregator for compatible EVMs",
   "type": "module",
   "workspaces": [
     "packages/*"
@@ -10,9 +12,7 @@
     "type": "git",
     "url": "git+https://github.com/btr-supply/btr-swap.git"
   },
-  "author": "BTR Supply <contact@btr.supply>",
-  "license": "MIT",
-  "description": "Generic Bridge+Swap aggregator for compatible EVMs",
+  "private": false,
   "scripts": {
     "format:check": "prettier --check packages/**/*.{ts,js} '*.{js,json,md}'",
     "format:fix": "prettier --write packages/**/*.{ts,js} '*.{js,json,md}'",
@@ -30,8 +30,8 @@
     "test:integration": "bun test --timeout 30000 ./tests/integration/*.test.ts",
     "validate:commit-msg": "bun ./scripts/check-name.js --check-commit",
     "validate:branch-name": "bun ./scripts/check-name.js --check-branch",
-    "validate:pre-push": "bun ./scripts/check-name.js --check-push",
     "pre-commit": "bunx lint-staged && bun run build && bun run typecheck && bun run test:unit",
+    "pre-push": "bun ./scripts/check-name.js --check-push",
     "commit:version": "VERSION=$(node -p \"require('./package.json').version\") && git add . && git commit -m \"[ops] Bump version to v$VERSION\"",
     "release": "bun run scripts/release.js $BUMP_TYPE",
     "push-tag": "VERSION=$(node -p \"require('./package.json').version\") && git tag -a v$VERSION -m \"Release v$VERSION: @btr-supply/swap and @btr-supply/swap-cli\" && git push origin v$VERSION",
