@@ -1,84 +1,70 @@
 #!/usr/bin/env node
-import { execSync as exec } from "child_process";
 import fs from "fs";
+import { execSync as runCmd } from "child_process";
+import { dirname, resolve } from "path";
+import { fileURLToPath } from "url";
 
-// Regex pattern for allowed prefixes (feat, fix, refactor, ops, docs)
-// followed by either '/' (for branches) or '[' (for commits/issues).
-const pattern = (type) => `^(feat|fix|refactor|ops|docs)${type === "branch" ? "/" : "\\["}(.|\n)*`;
-
-// Parse command line arguments.
-const args = new Set(process.argv.slice(2));
-const [checkBranch, checkCommit, checkPush] = [
-  "-b",
-  "--check-branch",
-  "-c",
-  "--check-commit",
-  "-p",
-  "--check-push",
-].map((flag) => args.has(flag));
-
-// Find the commit message file if provided (used by commit-msg hook).
-const msgFile = process.argv[process.argv.indexOf("--commit-msg-file") + 1];
-
-let isValid = true;
-const fail = (type, val) => (
-  console.error(`\n[POLICY] Invalid ${type}: ${val}\n`), (isValid = false)
-);
-const run = (cmd) => {
+// Helper to run shell commands synchronously
+const run = (c) => {
   try {
-    return exec(cmd, { stdio: "pipe" }).toString().trim();
+    return runCmd(c, { stdio: "pipe" }).toString().trim();
   } catch {
     return "";
   }
 };
 
-// Get current branch name.
+const dir = dirname(fileURLToPath(import.meta.url));
+const defaultMsg = resolve(dir, "..", `.git/COMMIT_EDITMSG`);
+const args = process.argv.slice(2);
+const has = (f) => args.includes(f);
+// Parse command line flags
+const branchCheck = has("-b") || has("--check-branch");
+const commitCheck = has("-c") || has("--check-commit");
+const pushCheck = has("-p") || has("--check-push");
+// Determine commit message file path, defaulting if checking commit
+const idx = args.indexOf("--commit-msg-file");
+const msgFile = (idx >= 0 && args[idx + 1]) || defaultMsg;
+// Regex patterns for branch and commit message formats
+const re = (t) => {
+  if (t === "branch") {
+    // e.g. feat/ or fix/
+    return /^(feat|fix|refactor|ops|docs)\//;
+  }
+  // e.g. [feat] Description
+  return /^\[(feat|fix|refactor|ops|docs)\] /;
+};
+// Get current branch and check if it's protected
 const branch = run("git rev-parse --abbrev-ref HEAD");
-// Define protected branches that bypass naming checks.
-const isProtectedBranch = ["main", "dev", "HEAD"].includes(branch);
+const protectedBranch = ["main", "dev", "HEAD"].includes(branch);
+let valid = true;
+// Records a failure message and sets the global invalid flag
+const fail = (t, v) => {
+  console.error(`[POLICY] Invalid ${t}: ${v}`);
+  valid = false;
+};
 
-// === Checks ===
-
-// Check branch name format (if checkBranch or checkPush is specified and not on a protected branch).
-(checkBranch || checkPush) &&
-  !isProtectedBranch &&
-  !RegExp(pattern("branch")).test(branch) &&
+// 1. Check Branch Name (if checking branch or push, and not protected)
+if ((branchCheck || pushCheck) && !protectedBranch && !re("branch").test(branch))
   fail("branch", branch);
 
-// Check commit message format (if checkCommit is specified and a message file is provided).
-if (checkCommit && msgFile) {
-  try {
-    const msg = fs.readFileSync(msgFile, "utf-8").trim();
-    !RegExp(pattern("commit")).test(msg) && fail("commit", msg);
-  } catch (err) {
-    fail("read", err.message);
-  }
+// 2. Check Commit Message (if checking commit and file exists)
+if (commitCheck && fs.existsSync(msgFile)) {
+  const m = fs.readFileSync(msgFile, "utf8").trim();
+  const commitRegex = re("commit");
+  if (!commitRegex.test(m)) fail("commit", m);
 }
 
-// Check format of commit messages being pushed (if checkPush is specified and not on a protected branch).
-if (checkPush && !isProtectedBranch) {
-  // Determine the range of commits to check: from upstream branch or default base.
-  let range =
-    run("git rev-parse --abbrev-ref --symbolic-full-name @{u}") ||
-    (() => {
-      // Fallback: Find main or master, use merge-base, or default to last commit.
-      const mainBranch = run(
-        "git show-ref --verify --quiet refs/heads/main && echo main || echo master",
-      );
-      return (mainBranch && run(`git merge-base HEAD ${mainBranch}`)) || "HEAD~1";
-    })();
-  range += "..HEAD";
-
-  // Check each commit message in the range.
-  run(`git log ${range} --pretty=%B`)
+// 3. Check Pre-push Commit Format (if checking push, and not protected)
+if (pushCheck && !protectedBranch) {
+  const base = run("git rev-parse --abbrev-ref --symbolic-full-name @{u}") || "HEAD~1";
+  run(`git log ${base}..HEAD --pretty=%B`)
     .split("\n\n\n")
-    .map((msg) => msg.trim())
-    .filter(Boolean)
-    .forEach(
-      (msg, idx) =>
-        !RegExp(pattern("commit")).test(msg) && fail(`commit${idx}`, msg.split("\n")[0]),
-    );
+    .forEach((m, i) => {
+      const t = m.trim();
+      // Validate each non-empty commit message
+      if (t && !re("commit").test(t)) fail(`commit${i}`, t.split("\n")[0]);
+    });
 }
 
-// Exit with status code 0 if valid, 1 otherwise.
-isValid ? console.log("OK") : (console.error("\nFailed\n"), process.exit(1));
+// Exit with appropriate status code
+process.exit(valid ? 0 : (console.error("Failed"), 1));
