@@ -310,7 +310,9 @@ export async function runSwapTests(
 
       console.log(`>>> Performance table:\n${getTrPerformanceTable(allTrs)}`);
       console.log(`>>> Best quote JSON:\n${toJSON(allTrs[0]!)}`);
-      console.log(`>>> Best quote compact:\n${serialize(compactTr(allTrs[0]!), { mode: SerializationMode.CSV, includeHeaders: false })}`);
+      console.log(
+        `>>> Best quote compact:\n${serialize(compactTr(allTrs[0]!), { mode: SerializationMode.CSV, includeHeaders: false })}`,
+      );
 
       if (validateResult) assertTr(allTrs[0], false);
       console.log(`✅ ${testInfo}`);
@@ -342,19 +344,23 @@ export const buildCliCommand = (p: IBtrSwapCliParams): string => {
     serializationMode = SerializationMode.JSON,
   } = p;
 
+  const v = p.verbose ?? 0;
   const flags = [
     p.apiKeys && `--api-keys ${JSON.stringify(p.apiKeys)}`,
     p.referrerCodes && `--referrer-codes ${JSON.stringify(p.referrerCodes)}`,
     p.integratorIds && `--integrator-ids ${JSON.stringify(p.integratorIds)}`,
     p.feesBps && `--fees-bps ${JSON.stringify(p.feesBps)}`,
-    p.silent && "--silent",
-  ].filter(Boolean).join(' ');
+    v === 1 && "-v",
+    v >= 2 && "-vv",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return `${executable} quote \
 --input ${formatCliToken(p.input)} --output ${formatCliToken(p.output)} \
 --input-amount ${p.inputAmountWei} --payer ${p.payer} --max-slippage ${maxSlippage} \
 --aggregators ${p.aggIds?.join(",")} --display-modes ${displayModes.join(",")} \
---serialization-mode ${serializationMode.toLowerCase()}${flags ? ' ' + flags : ''}`;
+--serialization ${serializationMode.toUpperCase()}${flags ? " " + flags : ""}`;
 };
 
 /**
@@ -365,7 +371,10 @@ export function getCliExecutable(): string {
   // Detect available runtime (bun or node)
   const detectRuntime = (): string => {
     for (const runtime of ["bun", "node"]) {
-      try { execSync(`command -v ${runtime}`, { stdio: "ignore" }); return runtime; } catch {}
+      try {
+        execSync(`command -v ${runtime}`, { stdio: "ignore" });
+        return runtime;
+      } catch {}
     }
     throw new Error("Missing runtime: bun or node");
   };
@@ -397,32 +406,58 @@ export function getCliExecutable(): string {
  */
 export function runCliCommand(
   params: IBtrSwapCliParams,
-  options: { validateWith?: string[]; silentMode?: boolean } = {}
+  options: { validateWith?: string[] } = {},
 ): string {
   const command = buildCliCommand(params);
   console.log("Running command:", command);
 
   try {
     const output = execSync(command, {
+      stdio: "pipe", // Capture stdout/stderr
       maxBuffer: 1024 * 1024 * 10, // 10MB buffer
-      timeout: 30000 // 30 second timeout
+      timeout: 60000, // 60 second timeout
     }).toString();
 
     if (options.validateWith?.length) {
-      assert(options.validateWith.some(t => output.includes(t)),
-        `Missing expected output: ${options.validateWith.join(", ")}`);
+      assert(
+        options.validateWith.some((t) => output.includes(t)),
+        `Missing expected output: ${options.validateWith.join(" or ")}`,
+      );
     }
 
-    if (options.silentMode) {
-      assert(!output.includes("⏳ Fetching quotes") && !output.includes("✅ Loaded"),
-        "Silent mode should hide progress messages");
+    // Check logging based on verbose level from params
+    const verboseLevel = params.verbose ?? 0;
+    if (verboseLevel === 0) {
+      assert(
+        !output.includes("⏳ Fetching quotes") && !output.includes("✅ Loaded"),
+        "Verbose=0 should hide progress messages",
+      );
+    } else if (verboseLevel >= 2) {
+      assert(output.includes("⏳ Fetching quotes"), "Verbose>=2 should show progress messages");
+      // Check for loaded env message only if envFile is explicitly set
+      if (params.envFile) {
+        assert(
+          output.includes("✅ Loaded"),
+          `Verbose>=2 with envFile should show loaded message (envFile: ${params.envFile})`,
+        );
+      }
     }
 
     return output;
   } catch (error: any) {
-    console.error("Command error:", command);
-    error.stdout?.toString() && console.log(error.stdout.toString());
-    error.stderr?.toString() && console.error(error.stderr.toString());
-    throw error;
+    // Log stdout/stderr on error before re-throwing
+    console.error("Command execution failed:");
+    if (error.stdout) {
+      console.error("--- STDOUT ---");
+      console.error(error.stdout.toString());
+      console.error("--- END STDOUT ---");
+    }
+    if (error.stderr) {
+      console.error("--- STDERR ---");
+      console.error(error.stderr.toString());
+      console.error("--- END STDERR ---");
+    }
+    console.error("Error object:", error);
+    throw error; // Re-throw the original error
   }
 }

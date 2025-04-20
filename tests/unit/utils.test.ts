@@ -162,7 +162,7 @@ describe("Utils", () => {
       const command = buildCliCommand(params);
 
       expect(command.toLowerCase()).to.include("--display-modes best_compact,rank".toLowerCase());
-      expect(command.toLowerCase()).to.include("--serialization-mode json".toLowerCase());
+      expect(command.toLowerCase()).to.include("--serialization json");
     });
 
     it("should handle optional flags and parameters", () => {
