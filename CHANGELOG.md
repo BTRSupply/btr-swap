@@ -5,6 +5,35 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
+## [1.40.0] - 2025-04-20
+
+### Features
+
+- [feat] Export toJSON utility function from core package
+
+### Fixes
+
+- [fix] Adjust CLI integration and unit tests for robustness and clarity
+- [fix] Allow refac commit type prefix in validation script
+- [fix] Correct regex patterns in check-name script
+- [fix] Ensure CLI logs respect verbosity levels correctly
+
+### Refactors
+
+- [refac] Align IBtrSwapCliParams type with verbose flag usage
+- [refac] Improve CLI argument parsing logic
+- [refac] Update root package metadata and script names
+
+### Ops
+
+- [ops] Bump version to 1.39.0 and update dependencies
+- [ops] Simplify Husky hooks
+
+### Docs
+
+- [docs] Add comments to release and helper scripts
+- [docs] Update CHANGELOG for v1.39.0
+
 ## [1.39.0] - 2025-04-20
 
 ### Fixes
