@@ -5,6 +5,25 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
+## [1.39.0] - 2025-04-20
+
+### Fixes
+
+- [fix] Correct regex patterns in check-name script
+
+### Refactors
+
+- [refac] Improve CLI argument parsing logic
+- [refac] Update root package metadata and script names
+
+### Ops
+
+- [ops] Simplify Husky hooks
+
+### Docs
+
+- [docs] Add comments to release and helper scripts
+
 ## [1.38.0] - 2025-04-17
 
 ### Features
