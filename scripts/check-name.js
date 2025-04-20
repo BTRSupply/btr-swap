@@ -26,7 +26,7 @@ const idx = args.indexOf("--commit-msg-file");
 const msgFile = (idx >= 0 && args[idx + 1]) || defaultMsg;
 // Regex patterns for branch and commit message formats
 const re = (t) =>
-  t === "branch" ? /^(feat|fix|refactor|ops|docs)\// : /^\[(feat|fix|refactor|ops|docs)\] /;
+  t === "branch" ? /^(feat|fix|refactor|ops|docs)\// : /^\[(feat|fix|refactor|refac|ops|docs)\] /;
 // Get current branch and check if it's protected
 const branch = run("git rev-parse --abbrev-ref HEAD");
 const protectedBranch = ["main", "dev", "HEAD"].includes(branch);
