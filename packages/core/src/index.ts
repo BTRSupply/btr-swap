@@ -28,6 +28,7 @@ import {
   getTrPerformanceTable,
   serialize,
   getToken,
+  toJSON,
 } from "@/utils";
 import { zeroXAggregator } from "@/ZeroX";
 
@@ -132,5 +133,5 @@ export const getBestTransactionRequest = async (
 // Export types and functions needed by the CLI and other consumers
 export { AggId, defaultAggregators, MAX_SLIPPAGE_BPS, DisplayMode, SerializationMode };
 export { config };
-export { compactTrs, getTrPerformance, getTrPerformanceTable, serialize, getToken };
+export { compactTrs, getTrPerformance, getTrPerformanceTable, serialize, getToken, toJSON };
 export type { IBtrSwapParams, IBtrSwapCliParams, ITransactionRequestWithEstimate };
