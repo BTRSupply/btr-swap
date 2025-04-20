@@ -173,7 +173,7 @@ export interface IBtrSwapCliParams extends IBtrSwapParams {
   serializationMode?: SerializationMode;
   envFile?: string;
   executable?: string;
-  silent?: boolean;
+  verbose?: number;
 }
 
 /** Estimate details for a swap step. */
