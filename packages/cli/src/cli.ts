@@ -20,15 +20,7 @@ import {
 } from "@btr-supply/swap";
 import { readFileSync } from "fs";
 import { toJSON } from "@btr-supply/swap";
-import {
-  applyConfig,
-  displayOutput,
-  handleError,
-  loadEnv,
-  parseArgs,
-  parseEnumArg,
-  parseJson,
-} from "./utils";
+import * as cliUtils from "./utils";
 
 const { version } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
 
@@ -81,7 +73,7 @@ Example:
 `;
 
 const runCli = async () => {
-  const args = parseArgs(process.argv.slice(2));
+  const args = cliUtils.parseArgs(process.argv.slice(2));
   const verbose = typeof args.verbose === "number" ? args.verbose : args.verbose ? 1 : 0;
   if (args.version) return console.log(`v${version}`);
   if (args.help || args._command !== "quote") return console.log(HELP);
@@ -89,28 +81,37 @@ const runCli = async () => {
   if (verbose >= 1) console.log("🚀 Starting BTR Swap CLI...");
 
   try {
-    const env = args["env-file"] ? loadEnv(args["env-file"]) : loadEnv();
-    if (env && ((args["env-file"] && verbose >= 1) || verbose >= 2)) {
-      console.log(`✅ Loaded ${env.count} vars from ${env.path}:`);
-      if (verbose >= 2) console.log(toJSON(env.parsed, 2));
+    // Load environment variables from custom file or default .env
+    const envPath = args.envFile as string | undefined;
+    const env = cliUtils.loadEnv(envPath);
+
+    if (env) {
+      if (verbose >= 1) {
+        const envCount = Object.keys(env).length;
+        const sourcePath = envPath || ".env";
+        console.log(`✅ Loaded ${envCount} variables from ${sourcePath}`);
+        if (verbose >= 2) console.log(toJSON(env, 2));
+      }
+    } else if (envPath && verbose >= 1) {
+      console.log(`⚠️ Environment file not found or empty: ${envPath}`);
     }
 
     const required = ["input", "output", "input-amount", "payer"];
     const missing = required.filter((k) => !args[k]);
-    if (missing.length) handleError(`Missing: ${missing.join(", ")}`);
+    if (missing.length) cliUtils.handleError(`Missing: ${missing.join(", ")}`);
 
     const [inputToken, outputToken] = [args.input, args.output].map((s) => getToken(s as string));
-    if (!inputToken || !outputToken) handleError("Invalid tokens");
+    if (!inputToken || !outputToken) cliUtils.handleError("Invalid tokens");
 
     const amountWei = BigInt(
       Number(args["input-amount"]).toLocaleString("fullwide", { useGrouping: false }),
     );
 
-    const apiKeys = parseJson("api-keys", args);
-    const referrerCodes = parseJson("referrer-codes", args);
-    const integratorIds = parseJson("integrator-ids", args);
-    const feesBps = parseJson("fees-bps", args);
-    applyConfig(
+    const apiKeys = cliUtils.parseJson("api-keys", args);
+    const referrerCodes = cliUtils.parseJson("referrer-codes", args);
+    const integratorIds = cliUtils.parseJson("integrator-ids", args);
+    const feesBps = cliUtils.parseJson("fees-bps", args);
+    cliUtils.applyConfig(
       { apiKeys, referrer: referrerCodes, integrators: integratorIds, feesBps },
       verbose === 0,
     );
@@ -126,9 +127,9 @@ const runCli = async () => {
       maxSlippage: args["max-slippage"]
         ? parseInt(args["max-slippage"] as string)
         : MAX_SLIPPAGE_BPS,
-      aggIds: parseEnumArg(args.aggregators, AggId, defaultAggregators),
-      displayModes: parseEnumArg(args.display, DisplayMode, [DisplayMode.ALL], true),
-      serializationMode: parseEnumArg(
+      aggIds: cliUtils.parseEnumArg(args.aggregators, AggId, defaultAggregators),
+      displayModes: cliUtils.parseEnumArg(args.display, DisplayMode, [DisplayMode.ALL], true),
+      serializationMode: cliUtils.parseEnumArg(
         args.serialization,
         SerializationMode,
         SerializationMode.JSON,
@@ -145,10 +146,10 @@ const runCli = async () => {
       console.log(toJSON(params, 2));
     }
     const trs = await getAllTimedTr(params);
-    if (!trs?.length) handleError("No routes found");
+    if (!trs?.length) cliUtils.handleError("No routes found");
 
     params.displayModes.forEach((m: DisplayMode) =>
-      displayOutput(m, trs, params.serializationMode),
+      cliUtils.displayOutput(m, trs, params.serializationMode),
     );
   } catch (e) {
     console.error("❌", e instanceof Error ? e.message : String(e));
