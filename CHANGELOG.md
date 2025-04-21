@@ -5,6 +5,18 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
+## [1.42.0] - 2025-04-21
+
+### Refactors
+
+- [refac] Improve CLI argument parsing
+- [refac] Simplify aggId handling in getAllTimedTr
+- [refac] Simplify parseEnumArg implementation
+
+### Docs
+
+- [docs] Updated contribution guide
+
 ## [1.41.0] - 2025-04-21
 
 ### Fixes

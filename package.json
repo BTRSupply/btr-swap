@@ -1,6 +1,6 @@
 {
   "name": "btr-swap",
-  "version": "1.41.0",
+  "version": "1.42.0",
   "author": "BTR Supply <contact@btr.supply>",
   "license": "MIT",
   "description": "Generic Bridge+Swap aggregator for compatible EVMs",
