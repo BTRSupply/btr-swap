@@ -15,7 +15,8 @@
     "rootDir": ".",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["packages/core/src/*"]
+      "@/core/*": ["packages/core/src/*"],
+      "@/cli/*": ["packages/cli/src/*"]
     }
   },
   "include": ["index.ts", "tests/**/*.ts"],
