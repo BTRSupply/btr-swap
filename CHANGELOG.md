@@ -5,6 +5,12 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
+## [1.43.0] - 2025-04-21
+
+### Features
+
+- [feat] Enable verbose fetchJson logging in -vv mode
+
 ## [1.42.0] - 2025-04-21
 
 ### Refactors
