@@ -42,26 +42,64 @@ export const parseArgs = (args: string[]): Record<string, any> => {
   return p;
 };
 
-/** Validates enum arguments. */
-export const parseEnumArg = <T extends object>(
-  val: any,
-  Enum: T,
-  def: any,
-  multi = false,
-): T | T[] | undefined => {
-  const valid = new Set(Object.values(Enum).map((e) => String(e).toUpperCase()));
-  const result =
-    val
-      ?.toString()
-      .toUpperCase()
-      .split(",")
-      .filter((v: string) => valid.has(v)) || [];
-  const enumMap = Object.fromEntries(
-    Object.entries(Enum).map(([k, v]) => [String(v).toUpperCase(), v]),
-  );
-  const mappedResult = result.map((r: string) => enumMap[r]).filter(Boolean);
-  return multi ? (mappedResult?.length ? mappedResult : def) : mappedResult[0] || def;
-};
+/** Validates enum arguments. Uses function overloading for better type inference. */
+
+// Overload for multi=true: Expects default to be T[], returns T[]
+export function parseEnumArg<T>(
+  val: unknown,
+  Enum: object, // Use object for broader compatibility with enum types
+  def: T[],
+  multi: true,
+): T[];
+
+// Overload for multi=false (or omitted): Expects default to be T, returns T
+export function parseEnumArg<T>(
+  val: unknown,
+  Enum: object,
+  def: T,
+  multi?: false | undefined, // Can be omitted or explicitly false
+): T;
+
+// Implementation
+export function parseEnumArg<T>(
+  val: unknown,
+  Enum: object,
+  def: T | T[],
+  multi: boolean = false,
+): T | T[] {
+  // Get valid enum string values (uppercase)
+  const validEnumStrings = new Set(Object.values(Enum).map((v) => String(v).toUpperCase()));
+
+  // Parse input value(s)
+  const inputValues = typeof val === "string" ? val.toUpperCase().split(",") : [];
+
+  // Filter valid input values
+  const validInputs = inputValues.filter((v) => validEnumStrings.has(v));
+
+  // Map uppercase string values back to actual enum values
+  // Create a reverse map { 'UPPERCASE_STRING': EnumValue }
+  const reverseEnumMap: Record<string, T> = {};
+  for (const key in Enum) {
+    // Handle potential numeric keys in TS enums and ensure it's a key of the enum object
+    if (isNaN(Number(key)) && Object.prototype.hasOwnProperty.call(Enum, key)) {
+      const enumValue = Enum[key as keyof typeof Enum] as T; // Cast value to T
+      reverseEnumMap[String(enumValue).toUpperCase()] = enumValue;
+    }
+  }
+
+  // Map the valid string inputs back to their corresponding Enum values
+  const mappedResult = validInputs
+    .map((v) => reverseEnumMap[v])
+    .filter((v): v is T => v !== undefined); // Use type guard to ensure T
+
+  if (multi) {
+    // If multi is true, return the array of mapped results or the default array
+    return mappedResult.length > 0 ? mappedResult : (def as T[]);
+  } else {
+    // If multi is false, return the first mapped result or the single default value
+    return mappedResult.length > 0 ? mappedResult[0] : (def as T);
+  }
+}
 
 /** Parses JSON CLI options. */
 export const parseJson = (key: string, args: any) =>

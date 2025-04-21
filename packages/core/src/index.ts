@@ -115,9 +115,6 @@ export async function getAllTimedTr(
     if (tr?.data) tr.from = params.payer;
   });
 
-  // Preserve original aggregator IDs
-  const originalAggIds = [...filteredAggIds];
-  params.aggIds = originalAggIds;
   return sortedTrs;
 }
 
