@@ -5,6 +5,27 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
+## [1.41.0] - 2025-04-21
+
+### Fixes
+
+- [fix] Correct package dependencies and test import paths
+- [fix] Export AggId from core package
+- [fix] Improve env file loading to properly handle custom paths
+- [fix] Remove reference to non-existent IBaseSwapParams type
+- [fix] Update CLI integration test path and assertions
+
+### Refactors
+
+- [refac] Make parser.test.ts more concise while preserving test logic
+- [refac] Restore readonly modifiers on BaseAggregator properties
+- [refac] Update CLI to use new env loading logic and improve logging
+
+### Ops
+
+- [ops] Update dependencies and apply formatting
+- [ops] Update tsconfig paths for core and cli packages
+
 ## [1.40.0] - 2025-04-20
 
 ### Features
