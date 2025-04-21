@@ -1,39 +1,39 @@
-import { BaseAggregator } from "@/abstract";
-import config from "@/config";
-import { aggregatorsWithContractCalls, defaultAggregators, MAX_SLIPPAGE_BPS } from "@/constants";
-import { firebirdAggregator } from "@/Firebird";
-import { kyberSwapAggregator } from "@/KyberSwap";
-import { lifiAggregator } from "@/LiFi";
-import { odosAggregator } from "@/Odos";
-import { oneInchAggregator } from "@/OneInch";
-import { openOceanAggregator } from "@/OpenOcean";
-import { paraSwapAggregator } from "@/ParaSwap";
-import { rangoAggregator } from "@/Rango";
-import { socketAggregator } from "@/Socket";
-import { squidAggregator } from "@/Squid";
+import { BaseAggregator } from "./abstract";
+import config from "./config";
+import { aggregatorsWithContractCalls, defaultAggregators, MAX_SLIPPAGE_BPS } from "./constants";
+import { firebirdAggregator } from "./Firebird";
+import { kyberSwapAggregator } from "./KyberSwap";
+import { lifiAggregator } from "./LiFi";
+import { odosAggregator } from "./Odos";
+import { oneInchAggregator } from "./OneInch";
+import { openOceanAggregator } from "./OpenOcean";
+import { paraSwapAggregator } from "./ParaSwap";
+import { rangoAggregator } from "./Rango";
+import { socketAggregator } from "./Socket";
+import { squidAggregator } from "./Squid";
 import {
-  AggId,
-  IBtrSwapParams,
-  IBtrSwapCliParams,
-  ITransactionRequestWithEstimate,
   DisplayMode,
+  IBtrSwapCliParams,
+  IBtrSwapParams,
+  ITransactionRequestWithEstimate,
   SerializationMode,
-} from "@/types";
-import { unizenAggregator } from "@/Unizen";
+  AggId,
+} from "./types";
+import { unizenAggregator } from "./Unizen";
 import {
-  paramsToString,
-  sortTrsByRate,
   compactTrs,
+  getToken,
   getTrPerformance,
   getTrPerformanceTable,
+  paramsToString,
   serialize,
-  getToken,
+  sortTrsByRate,
   toJSON,
-} from "@/utils";
-import { zeroXAggregator } from "@/ZeroX";
+} from "./utils";
+import { zeroXAggregator } from "./ZeroX";
 
 /** Mapping of AggId to its corresponding Aggregator implementation instance. */
-export const aggregatorById: { [key: string]: BaseAggregator } = {
+export const aggregatorById: Partial<{ [key in AggId]: BaseAggregator }> = {
   // Meta-Aggregators
   [AggId.SQUID]: squidAggregator,
   [AggId.LIFI]: lifiAggregator,
@@ -71,51 +71,53 @@ export async function getCallData(o: IBtrSwapParams): Promise<string> {
  * @throws {Error} If no viable routes are found.
  */
 export async function getAllTimedTr(
-  o: IBtrSwapParams,
-): Promise<ITransactionRequestWithEstimate[] | undefined> {
-  // Set default aggregators based on requirements
-  o.aggIds ??= o.customContractCalls?.length ? aggregatorsWithContractCalls : defaultAggregators;
-  if (!(o.aggIds instanceof Array)) o.aggIds = [o.aggIds];
-  o.expiryMs ??= 5_000; // 5s timeout
+  params: IBtrSwapParams,
+): Promise<ITransactionRequestWithEstimate[]> {
+  const aggIds = params.aggIds ?? defaultAggregators;
+  const filteredAggIds = aggIds.filter((id) => aggregatorById[id]);
+
+  params.expiryMs ??= 5_000; // 5s timeout
 
   // Fetch quotes concurrently with timeout
   const trs = (
     await Promise.all(
-      o.aggIds.map(async (aggId: string): Promise<ITransactionRequestWithEstimate | undefined> => {
-        const aggregator = aggregatorById[aggId];
-        if (!aggregator) throw new Error(`Aggregator not found: ${aggId}`);
+      filteredAggIds.map(
+        async (aggId: string): Promise<ITransactionRequestWithEstimate | undefined> => {
+          const aggregator = aggregatorById[aggId as AggId];
+          if (!aggregator) throw new Error(`Aggregator not found: ${aggId}`);
 
-        try {
-          const timeoutPromise = new Promise<undefined>((resolve) =>
-            setTimeout(() => resolve(undefined), o.expiryMs),
-          );
+          try {
+            const timeoutPromise = new Promise<undefined>((resolve) =>
+              setTimeout(() => resolve(undefined), params.expiryMs),
+            );
 
-          const tr = await Promise.race([aggregator.getTimedTr(o), timeoutPromise]);
-          if (tr && !tr.aggId) tr.aggId = aggregator.id;
-          return tr;
-        } catch (e) {
-          console.error(`[${aggId}] Error retrieving tx`, e);
-          return undefined;
-        }
-      }),
+            const tr = await Promise.race([aggregator.getTimedTr(params), timeoutPromise]);
+            if (tr && !tr.aggId) tr.aggId = aggregator.id;
+            return tr;
+          } catch (e) {
+            console.error(`[${aggId}] Error retrieving tx`, e);
+            return undefined;
+          }
+        },
+      ),
     )
   ).filter(Boolean) as ITransactionRequestWithEstimate[];
 
   if (trs.length === 0) {
     throw new Error(
-      `No viable routes found for ${paramsToString(o)} across aggregators: ${o.aggIds.join(", ")}`,
+      `No viable routes found for ${paramsToString(params)} across aggregators: ${filteredAggIds.join(", ")}`,
     );
   }
 
   // Sort by best rate and ensure correct payer address
   const sortedTrs = sortTrsByRate(trs);
   sortedTrs.forEach((tr) => {
-    if (tr?.data) tr.from = o.payer;
+    if (tr?.data) tr.from = params.payer;
   });
 
   // Preserve original aggregator IDs
-  const originalAggIds = [...o.aggIds];
-  o.aggIds = originalAggIds;
+  const originalAggIds = [...filteredAggIds];
+  params.aggIds = originalAggIds;
   return sortedTrs;
 }
 
@@ -131,7 +133,18 @@ export const getBestTransactionRequest = async (
 ): Promise<ITransactionRequestWithEstimate | undefined> => (await getAllTimedTr(o))?.[0];
 
 // Export types and functions needed by the CLI and other consumers
-export { AggId, defaultAggregators, MAX_SLIPPAGE_BPS, DisplayMode, SerializationMode };
-export { config };
-export { compactTrs, getTrPerformance, getTrPerformanceTable, serialize, getToken, toJSON };
-export type { IBtrSwapParams, IBtrSwapCliParams, ITransactionRequestWithEstimate };
+export {
+  compactTrs,
+  config,
+  defaultAggregators,
+  DisplayMode,
+  getToken,
+  getTrPerformance,
+  getTrPerformanceTable,
+  MAX_SLIPPAGE_BPS,
+  SerializationMode,
+  serialize,
+  toJSON,
+  AggId,
+};
+export type { IBtrSwapCliParams, IBtrSwapParams, ITransactionRequestWithEstimate };
