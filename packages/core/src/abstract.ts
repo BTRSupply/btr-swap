@@ -1,14 +1,10 @@
-import {
-  AggId,
-  IStatusParams,
-  IStatusResponse,
-  IBtrSwapParams,
-  ITransactionRequestWithEstimate,
-} from "./types";
+import type { TransactionRequest } from "./types";
+import config from "./config";
+import { AggId, IStatusParams, IStatusResponse, IBtrSwapParams } from "./types";
 
-import c from "@/config";
-import { MAX_SLIPPAGE_BPS } from "@/constants";
-import { notImplemented, validateParams, withLatency } from "@/utils";
+import { MAX_SLIPPAGE_BPS } from "./constants";
+import { notImplemented, validateParams, withLatency } from "./utils";
+import type { ITransactionRequestWithEstimate } from "./types";
 
 /**
  * Base class for all DEX/Bridge aggregators.
@@ -43,14 +39,14 @@ export abstract class BaseAggregator {
   /**
    * Initializes common properties for an aggregator instance.
    * Reads configuration values like API root, API key, integrator ID, referrer, and fee BPS
-   * from the global configuration (`@/config`).
+   * from the global configuration.
    * @param aggId - The unique identifier for this aggregator (e.g., `AggId.LIFI`).
    * @throws {Error} If configuration is missing or incomplete (e.g., missing `apiRoot`) for the specified `aggId`.
    */
   constructor(aggId: AggId) {
     this.id = aggId;
     // Get configuration from config.ts
-    const aggregatorConfig = c[this.id];
+    const aggregatorConfig = config[this.id];
 
     if (!aggregatorConfig) {
       throw new Error(`No configuration found for aggregator ID: ${this.id}`);
@@ -72,7 +68,7 @@ export abstract class BaseAggregator {
    * - Sets default `output.chainId` to `input.chainId` for same-chain swaps if not provided.
    * - Sets default `receiver` to `payer` if not provided.
    * - Ensures the current aggregator's ID is included in `aggIds`.
-   * - Sets default `maxSlippage` to `MAX_SLIPPAGE_BPS` (from `@/constants`) if not provided.
+   * - Sets default `maxSlippage` to `MAX_SLIPPAGE_BPS` (from `../constants`) if not provided.
    * - Marks the parameters as overloaded to prevent redundant processing.
    *
    * Subclasses may override this to add aggregator-specific validation or defaults,
