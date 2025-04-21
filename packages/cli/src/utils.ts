@@ -8,7 +8,9 @@ import {
   serialize,
   AggId,
 } from "@btr-supply/swap";
-import { config as dotenv } from "dotenv";
+import { config } from "dotenv";
+import * as fs from "fs";
+import path from "path";
 
 /** Logs an error and exits. */
 export const handleError = (msg: string): never => (console.error("❌", msg), process.exit(1));
@@ -17,20 +19,25 @@ export const handleError = (msg: string): never => (console.error("❌", msg), p
 export const parseArgs = (args: string[]): Record<string, any> => {
   const p: Record<string, any> = { _command: args[0] === "quote" ? "quote" : undefined };
   const toCamelCase = (s: string) => s.replace(/-(.)/g, (_, c) => c.toUpperCase());
+  let verbose_level = 0;
 
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === "-h" || a === "--help") p.help = true;
     else if (a === "--version") p.version = true;
-    else if (a === "-vv") p.verbose = 2;
-    else if (a === "-v" || a === "--verbose") p.verbose = (p.verbose || 0) + 1;
+    else if (a === "-vv") verbose_level += 2;
+    else if (a === "-v" || a === "--verbose") verbose_level += 1;
     else if (a.startsWith("--")) {
       const key = toCamelCase(a.slice(2));
-      if (key === "verbose") p.verbose = (p.verbose || 0) + 1;
-      else {
+      if (key === "verbose") {
+        // Already handled by the '-v' || '--verbose' check above, but prevent it from being treated as a normal arg
+      } else {
         p[key] = args[i + 1] && !args[i + 1].startsWith("-") ? args[++i] : true;
       }
     }
+  }
+  if (verbose_level > 0) {
+    p.verbose = verbose_level;
   }
   return p;
 };
@@ -56,13 +63,37 @@ export const parseEnumArg = <T extends object>(val: any, Enum: T, def: any, mult
 export const parseJson = (key: string, args: any) =>
   args[key] ? JSON.parse(args[key]) : undefined;
 
-/** Loads a .env file. */
-export const loadEnv = (path?: string) =>
-  dotenv(path ? { path } : undefined).parsed && {
-    parsed: dotenv().parsed,
-    count: Object.keys(dotenv().parsed || {}).length,
-    path: path || ".env",
-  };
+/**
+ * Loads environment variables from a specified .env file.
+ *
+ * @param envPath Optional path to the .env file. If provided, will load variables from this path.
+ * @returns The loaded environment variables object, or undefined if the file doesn't exist or is empty.
+ */
+export function loadEnv(envPath?: string): Record<string, string> | undefined {
+  try {
+    // If a custom path is provided, resolve it directly
+    // Otherwise, look for .env in the current directory
+    const dotenvPath = envPath ? path.resolve(envPath) : path.resolve(process.cwd(), ".env");
+
+    // Check if the file exists
+    if (!fs.existsSync(dotenvPath)) {
+      return undefined;
+    }
+
+    // Load the environment file with override option to ensure custom files take precedence
+    const result = config({
+      path: dotenvPath,
+      override: true, // Ensure variables override any previously set ones
+    });
+
+    return result.parsed && Object.keys(result.parsed).length > 0 ? result.parsed : undefined;
+  } catch (error) {
+    console.error(
+      `Error loading env file: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return undefined;
+  }
+}
 
 /** Applies environment and CLI JSON overrides to the core config. */
 export const applyConfig = (
