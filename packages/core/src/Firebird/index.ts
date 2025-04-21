@@ -1,7 +1,7 @@
 import { IFirebirdEncodedData, IFirebirdEncodeResponse, IFirebirdQuoteResponse } from "./types";
 
-import { BaseAggregator } from "@/abstract";
-import { nativeTokenAddress, zeroAddress } from "@/constants";
+import { BaseAggregator } from "../abstract";
+import { nativeTokenAddress, zeroAddress } from "../constants";
 import {
   AggId,
   IBtrSwapParams,
@@ -10,7 +10,7 @@ import {
   ProtocolType,
   StepType,
   TransactionRequest,
-} from "@/types";
+} from "../types";
 import {
   addEstimatesToTr,
   buildQueryParams,
@@ -18,7 +18,7 @@ import {
   fetchJson,
   formatError,
   mapKToKV,
-} from "@/utils";
+} from "../utils";
 
 /**
  * Firebird Aggregator Implementation.

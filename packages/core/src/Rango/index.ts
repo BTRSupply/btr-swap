@@ -1,7 +1,7 @@
 import { IRangoFee, IRangoPath, IRangoQuoteParams, IRangoRoute, IRangoSwapResponse } from "./types";
 
-import { BaseAggregator } from "@/abstract";
-import { zeroAddress } from "@/constants";
+import { BaseAggregator } from "../abstract";
+import { zeroAddress } from "../constants";
 import {
   AggId,
   IBtrSwapParams,
@@ -13,7 +13,7 @@ import {
   ProtocolType,
   StepType,
   TransactionRequest,
-} from "@/types";
+} from "../types";
 import {
   addEstimatesToTr,
   buildQueryParams,
@@ -21,7 +21,7 @@ import {
   emptyEstimate,
   fetchJson,
   formatError,
-} from "@/utils";
+} from "../utils";
 
 /**
  * Rango Aggregator Implementation.

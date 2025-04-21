@@ -1,8 +1,8 @@
 import { ICowSwapQuote, ICowSwapQuoteResponse } from "./types";
 
-import { JITAggregator } from "@/abstract";
-import { zeroAddress } from "@/constants";
-import { AggId, IStatusResponse, TransactionRequest } from "@/types";
+import { JITAggregator } from "../abstract";
+import { zeroAddress } from "../constants";
+import { AggId, IStatusResponse, TransactionRequest } from "../types";
 import {
   IBtrSwapParams,
   IStatusParams,
@@ -11,7 +11,7 @@ import {
   ITransactionRequestWithEstimate,
   ProtocolType,
   StepType,
-} from "@/types";
+} from "../types";
 import {
   addEstimatesToTr,
   emptyEstimate,
@@ -19,7 +19,7 @@ import {
   formatError,
   toBigInt,
   weiToString,
-} from "@/utils";
+} from "../utils";
 
 /**
  * CoW Protocol (CowSwap) Aggregator Implementation.

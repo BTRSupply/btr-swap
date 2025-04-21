@@ -1,6 +1,6 @@
 import { IOdosAssembleResponse, IOdosQuoteParams, IOdosQuoteResponse } from "./types";
 
-import { BaseAggregator } from "@/abstract";
+import { BaseAggregator } from "../abstract";
 import {
   AggId,
   ICostEstimate,
@@ -11,7 +11,7 @@ import {
   ProtocolType,
   StepType,
   TransactionRequest,
-} from "@/types";
+} from "../types";
 import {
   addEstimatesToTr,
   emptyEstimate,
@@ -19,7 +19,7 @@ import {
   formatError,
   mapKToKV,
   toBigInt,
-} from "@/utils";
+} from "../utils";
 
 /**
  * Odos Aggregator Implementation.

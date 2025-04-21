@@ -9,20 +9,21 @@ import {
   SquidCallType,
 } from "./types";
 
-import { BaseAggregator } from "@/abstract";
-import { IStatusResponse, OpStatus } from "@/types";
+import { BaseAggregator } from "../abstract";
 import {
   AggId,
   ChainType,
   IBtrSwapParams,
   ICustomContractCall,
   IStatusParams,
+  IStatusResponse,
   ISwapStep,
   IToken,
   ITransactionRequestWithEstimate,
+  OpStatus,
   ProtocolType,
   StepType,
-} from "@/types";
+} from "../types";
 import {
   addEstimatesToTr,
   buildQueryParams,
@@ -30,7 +31,7 @@ import {
   fetchJson,
   formatError,
   mapKToKV,
-} from "@/utils";
+} from "../utils";
 
 /**
  * Squid Aggregator Implementation.

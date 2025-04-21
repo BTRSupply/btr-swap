@@ -1,6 +1,6 @@
-import { JITAggregator } from "@/abstract";
-import { AggId } from "@/types";
-import { mapKToKV } from "@/utils";
+import { JITAggregator } from "../abstract";
+import { AggId } from "../types";
+import { mapKToKV } from "../utils";
 
 /**
  * Hashflow Aggregator Implementation.

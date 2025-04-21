@@ -6,7 +6,7 @@ import {
   ISocketToken,
 } from "./types";
 
-import { BaseAggregator } from "@/abstract";
+import { BaseAggregator } from "../abstract";
 import {
   AggId,
   IBtrSwapParams,
@@ -20,7 +20,7 @@ import {
   OpStatus,
   ProtocolType,
   StepType,
-} from "@/types";
+} from "../types";
 import {
   addEstimatesToTr,
   buildQueryParams,
@@ -29,7 +29,7 @@ import {
   fetchJson,
   formatError,
   mapKToKV,
-} from "@/utils";
+} from "../utils";
 
 /**
  * Socket Aggregator Implementation.

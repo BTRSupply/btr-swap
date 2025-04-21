@@ -1,4 +1,4 @@
-import { TransactionRequest } from "@/types";
+import { TransactionRequest } from "../types";
 
 /** Optional custom contract call parameters for Li.FI routes. */
 export interface ILifiContractCall {

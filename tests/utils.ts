@@ -4,20 +4,20 @@ import * as fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import { addresses, MAX_SLIPPAGE_BPS } from "@/constants";
-import { getAllTimedTr } from "@/index";
+import { addresses, MAX_SLIPPAGE_BPS } from "@/core/constants";
+import { getAllTimedTr } from "@/core/index";
 import {
   AggId,
+  DisplayMode,
+  IBtrSwapCliParams,
+  IBtrSwapParams,
   ICostEstimate,
   ISwapEstimate,
-  IBtrSwapParams,
-  IBtrSwapCliParams,
   IToken,
   ITransactionRequestWithEstimate,
-  TokenInfoTuple,
-  DisplayMode,
   SerializationMode,
-} from "@/types";
+  TokenInfoTuple,
+} from "@/core/types";
 import {
   compactTr,
   getToken,
@@ -27,7 +27,7 @@ import {
   sleep,
   toJSON,
   weiToString,
-} from "@/utils";
+} from "@/core/utils";
 
 // Re-export sleep from @/utils
 export { sleep };

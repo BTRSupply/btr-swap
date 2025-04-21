@@ -1,4 +1,4 @@
-import { TransactionRequest } from "@/types";
+import { TransactionRequest } from "../types";
 
 /** Represents details about a swap performed on a specific exchange within a ParaSwap route. */
 export interface IParaSwapExchange {

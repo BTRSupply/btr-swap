@@ -1,7 +1,7 @@
 import { IOneInchQuoteApiResponse, IOneInchSwapApiResponse } from "./types";
 
-import { BaseAggregator } from "@/abstract";
-import { nativeTokenAddress, zeroAddress } from "@/constants";
+import { BaseAggregator } from "../abstract";
+import { nativeTokenAddress, zeroAddress } from "../constants";
 import {
   AggId,
   ICostEstimate,
@@ -10,7 +10,7 @@ import {
   ITransactionRequestWithEstimate,
   ProtocolType,
   StepType,
-} from "@/types";
+} from "../types";
 import {
   addEstimatesToTr,
   buildQueryParams,
@@ -18,7 +18,7 @@ import {
   fetchJson,
   formatError,
   mapKToKV,
-} from "@/utils";
+} from "../utils";
 
 /**
  * 1inch Aggregator Implementation.

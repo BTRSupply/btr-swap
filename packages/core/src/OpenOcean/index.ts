@@ -1,7 +1,7 @@
 import { IOpenOceanSwapResponse } from "./types";
 
-import { BaseAggregator } from "@/abstract";
-import { nativeTokenAddress, zeroAddress } from "@/constants";
+import { BaseAggregator } from "../abstract";
+import { nativeTokenAddress, zeroAddress } from "../constants";
 import {
   AggId,
   ICostEstimate,
@@ -11,14 +11,14 @@ import {
   ITransactionRequestWithEstimate,
   ProtocolType,
   StepType,
-} from "@/types";
+} from "../types";
 import {
   addEstimatesToTr,
   buildQueryParams,
   emptyCostEstimate,
   fetchJson,
   formatError,
-} from "@/utils";
+} from "../utils";
 
 /**
  * OpenOcean Aggregator Implementation.

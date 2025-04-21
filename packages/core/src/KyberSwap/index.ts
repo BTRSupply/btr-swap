@@ -1,5 +1,5 @@
-import { BaseAggregator } from "@/abstract";
-import { nativeTokenAddress, zeroAddress } from "@/constants";
+import { BaseAggregator } from "../abstract";
+import { nativeTokenAddress, zeroAddress } from "../constants";
 import {
   AggId,
   IBtrSwapParams,
@@ -10,7 +10,7 @@ import {
   ProtocolType,
   StepType,
   TransactionRequest,
-} from "@/types";
+} from "../types";
 import {
   addEstimatesToTr,
   buildQueryParams,
@@ -19,7 +19,7 @@ import {
   formatError,
   mapKToKV,
   toBigInt,
-} from "@/utils";
+} from "../utils";
 
 /**
  * KyberSwap Aggregator Implementation.

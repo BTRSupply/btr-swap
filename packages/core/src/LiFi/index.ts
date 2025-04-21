@@ -6,8 +6,8 @@ import {
   ILifiTransactionStatus,
 } from "./types";
 
-import { BaseAggregator } from "@/abstract";
-import { AggId, IStatusResponse, OpStatus } from "@/types";
+import { BaseAggregator } from "../abstract";
+import { AggId, IStatusResponse, OpStatus } from "../types";
 import {
   IBtrSwapParams,
   ICostEstimate,
@@ -19,7 +19,7 @@ import {
   ProtocolType,
   StepType,
   TransactionRequest,
-} from "@/types";
+} from "../types";
 import {
   addEstimatesToTr,
   buildQueryParams,
@@ -27,7 +27,7 @@ import {
   formatError,
   mapKToKV,
   weiToString,
-} from "@/utils";
+} from "../utils";
 
 /**
  * LiFi Aggregator Implementation.

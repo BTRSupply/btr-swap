@@ -5,8 +5,8 @@ import {
   IUnizenToken,
 } from "./types";
 
-import { BaseAggregator } from "@/abstract";
-import { MAX_SLIPPAGE_BPS } from "@/constants";
+import { BaseAggregator } from "../abstract";
+import { MAX_SLIPPAGE_BPS } from "../constants";
 import {
   AggId,
   IBtrSwapParams,
@@ -18,7 +18,7 @@ import {
   ProtocolType,
   StepType,
   TransactionRequest,
-} from "@/types";
+} from "../types";
 import {
   addEstimatesToTr,
   buildQueryParams,
@@ -26,7 +26,7 @@ import {
   fetchJson,
   formatError,
   mapKToKV,
-} from "@/utils";
+} from "../utils";
 
 /**
  * Unizen Aggregator Implementation.

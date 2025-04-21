@@ -1,7 +1,7 @@
 import { IRocketXQuoteRequest, IRocketXQuoteResponse } from "./types";
 
-import { UnimplementedAggregator } from "@/abstract";
-import { nativeTokenAddress, zeroAddress } from "@/constants";
+import { UnimplementedAggregator } from "../abstract";
+import { nativeTokenAddress, zeroAddress } from "../constants";
 import {
   AggId,
   IStatusParams,
@@ -11,8 +11,8 @@ import {
   ProtocolType,
   StepType,
   TransactionRequest,
-} from "@/types";
-import { addEstimatesToTr, emptyEstimate, fetchJson, formatError } from "@/utils";
+} from "../types";
+import { addEstimatesToTr, emptyEstimate, fetchJson, formatError } from "../utils";
 
 /**
  * RocketX Aggregator Implementation.

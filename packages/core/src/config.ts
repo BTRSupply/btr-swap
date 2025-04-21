@@ -1,8 +1,8 @@
 // src/config.ts
 // Centralized configuration values using interfaces
 
-import { AggId as Id } from "@/types";
-import { envOrNull, envInt, envApiRoot } from "@/utils";
+import { AggId as Id } from "./types";
+import { envOrNull, envInt, envApiRoot } from "./utils";
 
 /**
  * Interface for an aggregator's configuration.

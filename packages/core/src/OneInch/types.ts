@@ -1,4 +1,4 @@
-import { TransactionRequest } from "@/types"; // Import shared TransactionRequest
+import { TransactionRequest } from "../types"; // Import shared TransactionRequest
 
 /** Represents the core data returned by the 1inch swap API. */
 export interface IOneInchRouteData {

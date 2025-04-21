@@ -1,4 +1,4 @@
-import { AggId, TokenInfoTuple } from "@/types";
+import { AggId, TokenInfoTuple } from "./types";
 
 /** List of aggregators supporting custom contract calls within a swap route. */
 export const aggregatorsWithContractCalls = [AggId.LIFI, AggId.SOCKET, AggId.SQUID];

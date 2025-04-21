@@ -1,4 +1,4 @@
-import { ChainType, TransactionRequest } from "@/types"; // Import shared types
+import { ChainType, TransactionRequest } from "../types"; // Import shared types
 
 /** Enum defining different types of custom calls supported by Squid. */
 export enum SquidCallType {
@@ -8,8 +8,8 @@ export enum SquidCallType {
   COLLECT_TOKEN_BALANCE = 3,
 }
 
-// Re-export ChainType if it's specific to Squid's usage or context, otherwise use the one from @/types directly.
-// export { ChainType } from "@/types"; // If it's truly shared
+// Re-export ChainType if it's specific to Squid's usage or context, otherwise use the one from ../types directly.
+// export { ChainType } from "../types"; // If it's truly shared
 
 /** Represents a post-swap hook configuration for Squid. */
 export interface IPostHook {

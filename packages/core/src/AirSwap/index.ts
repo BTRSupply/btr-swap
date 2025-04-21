@@ -1,5 +1,5 @@
-import { JITAggregator } from "@/abstract";
-import { AggId } from "@/types";
+import { JITAggregator } from "../abstract";
+import { AggId } from "../types";
 
 /**
  * AirSwap Aggregator Implementation.

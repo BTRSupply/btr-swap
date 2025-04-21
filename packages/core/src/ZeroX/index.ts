@@ -1,7 +1,7 @@
 import { I0xQuoteResponse } from "./types";
 
-import { BaseAggregator } from "@/abstract";
-import { nativeTokenAddress, zeroAddress } from "@/constants";
+import { BaseAggregator } from "../abstract";
+import { nativeTokenAddress, zeroAddress } from "../constants";
 import {
   AggId,
   IBtrSwapParams,
@@ -10,14 +10,14 @@ import {
   ITransactionRequestWithEstimate,
   ProtocolType,
   StepType,
-} from "@/types";
+} from "../types";
 import {
   addEstimatesToTr,
   buildQueryParams,
   emptyCostEstimate,
   emptyEstimate,
   fetchJson,
-} from "@/utils";
+} from "../utils";
 
 /**
  * 0x V2 API Aggregator Implementation.

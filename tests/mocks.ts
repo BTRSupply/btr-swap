@@ -1,5 +1,5 @@
-import { AggId, StepType, ITransactionRequestWithEstimate } from "@/types";
-import { getToken } from "@/utils";
+import { AggId, StepType, ITransactionRequestWithEstimate } from "@/core/types";
+import { getToken } from "@/core/utils";
 
 export const mockLifiTr: ITransactionRequestWithEstimate = {
   params: {
