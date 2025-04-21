@@ -96,15 +96,17 @@ const runCli = async () => {
       console.log(`⚠️ Environment file not found or empty: ${envPath}`);
     }
 
-    const required = ["input", "output", "input-amount", "payer"];
+    // Define required arguments in camelCase format
+    const required = ["input", "output", "inputAmount", "payer"];
     const missing = required.filter((k) => !args[k]);
     if (missing.length) cliUtils.handleError(`Missing: ${missing.join(", ")}`);
 
     const [inputToken, outputToken] = [args.input, args.output].map((s) => getToken(s as string));
     if (!inputToken || !outputToken) cliUtils.handleError("Invalid tokens");
 
+    // Access inputAmount using camelCase key
     const amountWei = BigInt(
-      Number(args["input-amount"]).toLocaleString("fullwide", { useGrouping: false }),
+      Number(args.inputAmount).toLocaleString("fullwide", { useGrouping: false }),
     );
 
     const apiKeys = cliUtils.parseJson("api-keys", args);
@@ -127,7 +129,7 @@ const runCli = async () => {
       maxSlippage: args["max-slippage"]
         ? parseInt(args["max-slippage"] as string)
         : MAX_SLIPPAGE_BPS,
-      aggIds: cliUtils.parseEnumArg(args.aggregators, AggId, defaultAggregators),
+      aggIds: cliUtils.parseEnumArg(args.aggregators, AggId, defaultAggregators, true),
       displayModes: cliUtils.parseEnumArg(args.display, DisplayMode, [DisplayMode.ALL], true),
       serializationMode: cliUtils.parseEnumArg(
         args.serialization,

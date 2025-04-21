@@ -43,7 +43,12 @@ export const parseArgs = (args: string[]): Record<string, any> => {
 };
 
 /** Validates enum arguments. */
-export const parseEnumArg = <T extends object>(val: any, Enum: T, def: any, multi = false) => {
+export const parseEnumArg = <T extends object>(
+  val: any,
+  Enum: T,
+  def: any,
+  multi = false,
+): T | T[] | undefined => {
   const valid = new Set(Object.values(Enum).map((e) => String(e).toUpperCase()));
   const result =
     val
@@ -55,8 +60,7 @@ export const parseEnumArg = <T extends object>(val: any, Enum: T, def: any, mult
     Object.entries(Enum).map(([k, v]) => [String(v).toUpperCase(), v]),
   );
   const mappedResult = result.map((r: string) => enumMap[r]).filter(Boolean);
-
-  return multi ? (mappedResult.length ? mappedResult : def) : mappedResult[0] || def;
+  return multi ? (mappedResult?.length ? mappedResult : def) : mappedResult[0] || def;
 };
 
 /** Parses JSON CLI options. */
