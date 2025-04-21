@@ -1,17 +1,19 @@
-import { addresses } from "@/constants";
+import { MAX_SLIPPAGE_BPS, addresses } from "./constants";
 import {
+  AggId,
+  DisplayMode,
+  IBtrSwapParams,
   ICostEstimate,
   IQuotePerformance,
   ISwapEstimate,
-  IBtrSwapParams,
+  ISwapStep,
   IToken,
   ITransactionRequestWithEstimate,
   SerializationMode,
   Stringifiable,
   TokenInfoTuple,
   TransactionRequest,
-  AggId,
-} from "@/types";
+} from "./types";
 
 /**
  * Type alias for header configuration in table/CSV generation.
@@ -772,4 +774,17 @@ export function getTrPerformanceTable(trs: ITransactionRequestWithEstimate[]): s
   );
 }
 
-export { SerializationMode } from "@/types";
+export { SerializationMode } from "./types";
+
+export function validateToken<T extends IBtrSwapParams>(p: T, input = true): boolean {
+  const token = input ? p.input : p.output;
+  return (
+    !!token &&
+    token.chainId > 0 &&
+    !!token.address &&
+    typeof token.address === "string" &&
+    ((token.decimals !== undefined && token.decimals >= 0) || token.decimals === 0) &&
+    !!token.symbol &&
+    typeof token.symbol === "string"
+  );
+}
