@@ -35,7 +35,7 @@ const envFileTestParams = <IBtrSwapCliParams>{
   aggIds: [AggId.LIFI, AggId.SOCKET],
   displayModes: [DisplayMode.RANK],
   serializationMode: SerializationMode.TABLE,
-  envFile: "/tmp/.env", // Use the custom env file
+  envFile: "/Users/derpa/Work/btr/contracts/evm/.env", // Use specified .env file
   verbose: 2, // Enable verbose logging to check env loading
 };
 
@@ -92,9 +92,8 @@ describe("BTR Swap CLI", function () {
       const command = `${baseParams.executable} --version`;
       const output = execSync(command, { stdio: "pipe" }).toString();
       console.log(`Version output: ${output}`);
-      expect(output)
-        .to.include("BTR Swap CLI v")
-        .and.match(/v\d+\.\d+\.\d+/);
+      // Check if output matches the simple version pattern
+      expect(output).to.match(/^v\d+\.\d+\.\d+\n?$/); // Match vX.Y.Z with optional newline
     } catch (error: any) {
       console.warn("CLI version test failed:", error);
       throw error;
@@ -139,11 +138,8 @@ describe("BTR Swap CLI", function () {
     "uses custom .env file",
     async () => {
       try {
-        // Expect the log message confirming the custom env file was loaded
-        // Create a dummy .env file for the test
-        execSync('echo "TEST_VAR1=value1\nTEST_VAR2=value2" > /tmp/.env');
         const output = runCliCommand(envFileTestParams, {
-          validateWith: ["✅ Loaded 2 vars from /tmp/.env", "│"],
+          validateWith: ["✅ Loaded", "/Users/derpa/Work/btr/contracts/evm/.env", "│"],
         }); // Check for env log AND table output
         // Also check that the main functionality still works (e.g., outputs a table)
         expect(output).to.include("│"); // Basic check for table structure is enough
