@@ -47,7 +47,7 @@ main     ← production-ready, automatic version bump + packaging + release on p
 
 1. Create a new branch from `dev` with the appropriate prefix (see [Naming Conventions](#naming-conventions)).
 2. Make your changes and ensure code quality by running `bun run pre-commit`.
-3. Commit your changes with a properly formatted commit message.
+3. Commit your changes (single, atomic feature or fix + associated formatting, no more. See [Naming Conventions](#naming-conventions))
 4. Create a pull request to merge your changes into the `dev` branch.
 5. After review and approval, your changes will be merged into `dev`.
 6. Periodically, the `dev` branch is merged (linearly) into `main` for releases.
