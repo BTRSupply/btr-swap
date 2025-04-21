@@ -10,7 +10,7 @@ import {
 } from "../mocks";
 import { buildCliCommand, getPayer } from "../utils";
 
-import { AggId, DisplayMode } from "@/types";
+import { AggId, DisplayMode } from "@/core/types";
 import {
   stripProtocol,
   buildQueryParams,
@@ -20,7 +20,7 @@ import {
   getTrPerformanceTable,
   SerializationMode,
   sortTrsByRate,
-} from "@/utils";
+} from "@/core/utils";
 
 describe("Utils", () => {
   describe("stripProtocol", () => {
