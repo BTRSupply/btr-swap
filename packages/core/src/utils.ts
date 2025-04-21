@@ -528,12 +528,14 @@ export async function fetchJson<T = unknown>(
   url: string | URL,
   options?: FetchOptions,
   method?: string,
-  silent = true,
+  verbose = false,
 ): Promise<T> {
+  // Override verbose based on CLI's VERBOSE env var (enable in -vv mode)
+  if (Number(process.env.VERBOSE) >= 2) verbose = true;
   const effectiveMethod = method ?? options?.method ?? "GET";
 
   try {
-    if (!silent) console.log(`>>>req [${effectiveMethod}] ${url}`);
+    if (verbose) console.log(`>>>req [${effectiveMethod}] ${url}`);
     const response = await fetch(url, { ...options, method: effectiveMethod });
 
     if (!response.ok) {

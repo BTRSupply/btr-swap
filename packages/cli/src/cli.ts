@@ -75,6 +75,8 @@ Example:
 const runCli = async () => {
   const args = cliUtils.parseArgs(process.argv.slice(2));
   const verbose = typeof args.verbose === "number" ? args.verbose : args.verbose ? 1 : 0;
+  // Expose verbose level to core utils (for fetchJson logging)
+  process.env.VERBOSE = verbose.toString();
   if (args.version) return console.log(`v${version}`);
   if (args.help || args._command !== "quote") return console.log(HELP);
 
