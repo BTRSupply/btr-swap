@@ -5,6 +5,20 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
 NB: [Auto-generated from commits](./scripts/release.js) - DO NOT EDIT.
 
+## [1.44.0] - 2025-04-22
+
+### Features
+
+- [feat] Add performance logging to JSON and SQLite
+
+### Fixes
+
+- [fix] Correct performance table test assertion
+
+### Refactors
+
+- [refac] Condense log performance tests
+
 ## [1.43.0] - 2025-04-21
 
 ### Features
