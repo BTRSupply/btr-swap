@@ -17,7 +17,7 @@ import {
   withLatency,
   getToken,
   serialize,
-  getTrPerformanceTable,
+  getPerformanceTable,
   SerializationMode,
   sortTrsByRate,
 } from "@/core/utils";
@@ -290,21 +290,21 @@ LIFI|1|1000|10|1|100|1|Uniswap`,
     });
 
     it("should generate performance table", () => {
-      const table = getTrPerformanceTable(
+      const table = getPerformanceTable(
         sortTrsByRate([mockLifiTr, mockRangoTr, mockSquidTr, mockUnizenTr, mockSocketTr]),
       );
       expect(table)
         .to.be.a("string")
         .and.include(
-          `────────┬────────┬──────────┬─────────┬─────────┬─────────┬───────┬────────────────────┐
-│ Agg ID │ Rate   │ Output   │ Gas USD │ Fee USD │ Latency │ Steps │ Protocols          │
-├────────┼────────┼──────────┼─────────┼─────────┼─────────┼───────┼────────────────────┤
-│ UNIZEN │ 1.010  │ 1010     │ 15      │ NaN     │ 80      │ 1     │ Curve              │
-│ LIFI   │ 1      │ 1000     │ 10      │ 1       │ 100     │ 1     │ Uniswap            │
-│ SOCKET │ 0.995  │ 995      │ 9       │ 1.500   │ 120     │ 1     │ Sushiswap          │
-│ RANGO  │ 0.990  │ 990      │ 12      │ 0.500   │ 150     │ 1     │ 1inch              │
-│ SQUID  │ 0.980  │ 980      │ 8       │ 2       │ 200     │ 1     │ Balancer           │
-└────────┴────────┴──────────┴─────────┴─────────┴─────────┴───────┴────────────────────┘`,
+          `────────┬──────────┬────────────┬─────────┬─────────┬─────────┬───────┬────────────────────┐
+│ Agg ID │ Rate     │ Output     │ Gas USD │ Fee USD │ Latency │ Steps │ Protocols          │
+├────────┼──────────┼────────────┼─────────┼─────────┼─────────┼───────┼────────────────────┤
+│ UNIZEN │ 1.010    │ 1010       │ 15      │ NaN     │ 80      │ 1     │ Curve              │
+│ LIFI   │ 1        │ 1000       │ 10      │ 1       │ 100     │ 1     │ Uniswap            │
+│ SOCKET │ 0.995    │ 995        │ 9       │ 1.500   │ 120     │ 1     │ Sushiswap          │
+│ RANGO  │ 0.990    │ 990        │ 12      │ 0.500   │ 150     │ 1     │ 1inch              │
+│ SQUID  │ 0.980    │ 980        │ 8       │ 2       │ 200     │ 1     │ Balancer           │
+└────────┴──────────┴────────────┴─────────┴─────────┴─────────┴───────┴────────────────────┘`,
         );
     });
   });

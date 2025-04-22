@@ -719,7 +719,7 @@ export async function withLatency<T>(fn: () => Promise<T>): Promise<[T, number]>
  * @param tr - The transaction request with estimate
  * @returns Performance metrics object
  */
-export function getTrPerformance(tr: ITransactionRequestWithEstimate): IQuotePerformance {
+export function getPerformance(tr: ITransactionRequestWithEstimate): IQuotePerformance {
   const estimates = tr.globalEstimates || {
     exchangeRate: 0,
     output: 0,
@@ -749,10 +749,10 @@ export function getTrPerformance(tr: ITransactionRequestWithEstimate): IQuotePer
  * @param trs - Array of transaction requests with estimates
  * @returns Formatted table string with performance metrics
  */
-export function getTrPerformanceTable(trs: ITransactionRequestWithEstimate[]): string {
+export function getPerformanceTable(trs: ITransactionRequestWithEstimate[]): string {
   if (!trs?.length) return "No transaction requests found.";
 
-  const table = trs.map(getTrPerformance);
+  const table = trs.map(getPerformance);
   const p = { ...trs[0].params, aggIds: [`Meta:${trs.length}` as AggId] } as IBtrSwapParams;
 
   return (
@@ -770,7 +770,7 @@ export function getTrPerformanceTable(trs: ITransactionRequestWithEstimate[]): s
         steps: "Steps",
         protocols: "Protocols",
       },
-      columnWidths: [8, 8, 10, 9, 9, 9, 7, 20],
+      columnWidths: [8, 10, 12, 9, 9, 9, 7, 20],
       padding: 1,
     })
   );
