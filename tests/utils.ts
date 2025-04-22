@@ -21,7 +21,7 @@ import {
 import {
   compactTr,
   getToken,
-  getTrPerformanceTable,
+  getPerformanceTable,
   paramsToString,
   serialize,
   sleep,
@@ -283,7 +283,7 @@ export function assertTr(tr: ITransactionRequestWithEstimate | undefined, log = 
   // Log transaction details if requested
   if (log) {
     console.log(`>>>rfq ${paramsToString(tr.params)}`);
-    console.log(`<<<res\n${getTrPerformanceTable([tr])}`);
+    console.log(`<<<res\n${getPerformanceTable([tr])}`);
   }
 }
 
@@ -308,7 +308,7 @@ export async function runSwapTests(
         throw new Error(`❌ ${testInfo}: No transaction requests found`);
       }
 
-      console.log(`>>> Performance table:\n${getTrPerformanceTable(allTrs)}`);
+      console.log(`>>> Performance table:\n${getPerformanceTable(allTrs)}`);
       console.log(`>>> Best quote JSON:\n${toJSON(allTrs[0]!)}`);
       console.log(
         `>>> Best quote compact:\n${serialize(compactTr(allTrs[0]!), { mode: SerializationMode.CSV, includeHeaders: false })}`,

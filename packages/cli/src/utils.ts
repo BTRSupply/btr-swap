@@ -2,8 +2,8 @@ import {
   compactTrs,
   config as coreConfig,
   DisplayMode,
-  getTrPerformance,
-  getTrPerformanceTable,
+  getPerformance,
+  getPerformanceTable,
   SerializationMode,
   serialize,
   AggId,
@@ -143,8 +143,8 @@ export const displayOutput = (mode: DisplayMode, trs: any, ser: SerializationMod
   console.log(
     mode === DisplayMode.RANK
       ? serializationMode === SerializationMode.TABLE
-        ? getTrPerformanceTable(trs)
-        : serialize(trs.map(getTrPerformance), { mode: serializationMode })
+        ? getPerformanceTable(trs)
+        : serialize(trs.map(getPerformance), { mode: serializationMode })
       : serialize(compactTrs(mode.includes("BEST") ? [trs[0]] : trs), { mode: serializationMode }),
   );
 };

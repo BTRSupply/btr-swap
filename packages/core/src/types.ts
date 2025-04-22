@@ -78,6 +78,7 @@ export enum SerializationMode {
   JSON = "JSON",
   CSV = "CSV",
   TABLE = "TABLE",
+  SQLITE = "SQLITE",
 }
 
 export enum DisplayMode {
@@ -174,6 +175,10 @@ export interface IBtrSwapCliParams extends IBtrSwapParams {
   envFile?: string;
   executable?: string;
   verbose?: number;
+  /** Optional path to log file for rank/best performance */
+  logFile?: string;
+  /** Mode for logging output (JSON or SQLITE) */
+  logMode?: SerializationMode;
 }
 
 /** Estimate details for a swap step. */

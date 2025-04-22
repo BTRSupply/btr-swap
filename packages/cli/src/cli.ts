@@ -9,18 +9,28 @@
  * Supports both same-chain and cross-chain swaps with customizable parameters.
  */
 
+import { readFileSync } from "fs";
 import {
   AggId,
   defaultAggregators,
   DisplayMode,
   getAllTimedTr,
   getToken,
+  IBtrSwapCliParams,
   MAX_SLIPPAGE_BPS,
   SerializationMode,
+  toJSON,
 } from "@btr-supply/swap";
-import { readFileSync } from "fs";
-import { toJSON } from "@btr-supply/swap";
-import * as cliUtils from "./utils";
+import {
+  parseArgs,
+  loadEnv,
+  handleError,
+  parseJson,
+  applyConfig,
+  parseEnumArg,
+  displayOutput,
+} from "./utils";
+import { logPerformance } from "./log";
 
 const { version } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
 
@@ -52,8 +62,10 @@ Options:
   --integrator-ids <json>   JSON: integrator IDs, e.g. '{"${AggId.LIFI}":"id1"}'
   --fees-bps <json>         JSON: fee bps, e.g. '{"${AggId.LIFI}":20}'
   --display <modes>         Comma-separated display modes: ${Object.values(DisplayMode).join(",")}
-  --serialization <mode>    Serialization mode: ${Object.values(SerializationMode).join(",")}
+  --serialization <mode>    Serialization mode: ${Object.values(SerializationMode).join(",")} (default: JSON)
   --env-file <path>         Load custom env file
+  --log-file <path>         Optional. Path to log file for rank table (relative or absolute)
+  --log-mode <mode>         Log mode: JSON,SQLITE (default: JSON)
   -v, -vv, --verbose        Verbose output (-vv for full details)
   --version                 Show version and exit
   -h, --help                Show this help message
@@ -73,7 +85,7 @@ Example:
 `;
 
 const runCli = async () => {
-  const args = cliUtils.parseArgs(process.argv.slice(2));
+  const args = parseArgs(process.argv.slice(2));
   const verbose = typeof args.verbose === "number" ? args.verbose : args.verbose ? 1 : 0;
   // Expose verbose level to core utils (for fetchJson logging)
   process.env.VERBOSE = verbose.toString();
@@ -85,7 +97,7 @@ const runCli = async () => {
   try {
     // Load environment variables from custom file or default .env
     const envPath = args.envFile as string | undefined;
-    const env = cliUtils.loadEnv(envPath);
+    const env = loadEnv(envPath);
 
     if (env) {
       if (verbose >= 1) {
@@ -101,28 +113,28 @@ const runCli = async () => {
     // Define required arguments in camelCase format
     const required = ["input", "output", "inputAmount", "payer"];
     const missing = required.filter((k) => !args[k]);
-    if (missing.length) cliUtils.handleError(`Missing: ${missing.join(", ")}`);
+    if (missing.length) handleError(`Missing: ${missing.join(", ")}`);
 
     const [inputToken, outputToken] = [args.input, args.output].map((s) => getToken(s as string));
-    if (!inputToken || !outputToken) cliUtils.handleError("Invalid tokens");
+    if (!inputToken || !outputToken) handleError("Invalid tokens");
 
     // Access inputAmount using camelCase key
     const amountWei = BigInt(
       Number(args.inputAmount).toLocaleString("fullwide", { useGrouping: false }),
     );
 
-    const apiKeys = cliUtils.parseJson("api-keys", args);
-    const referrerCodes = cliUtils.parseJson("referrer-codes", args);
-    const integratorIds = cliUtils.parseJson("integrator-ids", args);
-    const feesBps = cliUtils.parseJson("fees-bps", args);
-    cliUtils.applyConfig(
+    const apiKeys = parseJson("api-keys", args);
+    const referrerCodes = parseJson("referrer-codes", args);
+    const integratorIds = parseJson("integrator-ids", args);
+    const feesBps = parseJson("fees-bps", args);
+    applyConfig(
       { apiKeys, referrer: referrerCodes, integrators: integratorIds, feesBps },
       verbose === 0,
     );
 
     if (verbose >= 3) console.log(`[DEBUG] Raw args.serialization: ${args.serialization}`);
 
-    const params = {
+    const params: IBtrSwapCliParams = {
       input: inputToken,
       output: outputToken,
       inputAmountWei: amountWei,
@@ -131,13 +143,20 @@ const runCli = async () => {
       maxSlippage: args["max-slippage"]
         ? parseInt(args["max-slippage"] as string)
         : MAX_SLIPPAGE_BPS,
-      aggIds: cliUtils.parseEnumArg(args.aggregators, AggId, defaultAggregators, true),
-      displayModes: cliUtils.parseEnumArg(args.display, DisplayMode, [DisplayMode.ALL], true),
-      serializationMode: cliUtils.parseEnumArg(
+      aggIds: parseEnumArg(args.aggregators, AggId, defaultAggregators, true),
+      displayModes: parseEnumArg(args.display, DisplayMode, [DisplayMode.ALL], true),
+      serializationMode: parseEnumArg(
         args.serialization,
         SerializationMode,
         SerializationMode.JSON,
-      ),
+      ) as SerializationMode,
+      logMode:
+        (args.logMode as string)?.toUpperCase() === SerializationMode.SQLITE
+          ? SerializationMode.SQLITE
+          : SerializationMode.JSON,
+      executable: args.executable as string | "btr-swap",
+      envFile: envPath,
+      logFile: args.logFile as string | undefined,
       apiKeys,
       referrerCodes,
       integratorIds,
@@ -150,11 +169,15 @@ const runCli = async () => {
       console.log(toJSON(params, 2));
     }
     const trs = await getAllTimedTr(params);
-    if (!trs?.length) cliUtils.handleError("No routes found");
+    if (!trs?.length) handleError("No routes found");
 
-    params.displayModes.forEach((m: DisplayMode) =>
-      cliUtils.displayOutput(m, trs, params.serializationMode),
+    params.displayModes!.forEach((m: DisplayMode) =>
+      displayOutput(m, trs, params.serializationMode!),
     );
+
+    if (params.logFile) {
+      logPerformance(trs, params.logFile, params.logMode);
+    }
   } catch (e) {
     console.error("❌", e instanceof Error ? e.message : String(e));
     if (verbose >= 1) console.error("Args:", toJSON(args, 2));
